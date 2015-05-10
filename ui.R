@@ -18,7 +18,9 @@ shinyUI(pageWithSidebar(
                                           # formerly issues2 ^
   # Show a text list of indicators
   mainPanel(
-    tableOutput("indicatorResults")
+    tableOutput("indicatorResults"),
+    textInput("requireds", "Required Indicators"),
+    textInput("excludeds", "Excluded Indicators")
   )
 ))
 

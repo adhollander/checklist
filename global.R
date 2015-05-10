@@ -4,7 +4,7 @@ library(reshape2)
 library(hash)
 
 colclassvect <- c("character", rep.int("integer", 362))
-indissues <- read.csv("/home/adh/ASI/grandmatrix.csv", header=T, sep="|", colClasses=colclassvect) 
+indissues <- read.csv("./data/grandmatrix.csv", header=T, sep="|", colClasses=colclassvect) 
 indicators <- indissues$Indicator
 issueindmat <- t(as.matrix(indissues[, 2:363], ncol=362))
 indvect <- rep(1,2066) # all indicators fair game to begin with.
@@ -12,7 +12,7 @@ issues <- colnames(indissues)[2:363]
 
 # 29 December 2014
 # hokay...let's work with SPARQL exports from the actual RDF graph. 
-indcomponents <- read.csv("/home/adh/ASI/checklist/indicator-componentissue.csv", header=T)
+indcomponents <- read.csv("./data/indicator-componentissue.csv", header=T)
 indcomponents2 <- indcomponents %>%
 #  mutate(indno = str_match(indicatorURI, "[0-9]+")) %>%
 #  mutate(issue = str_replace_all(component, "\"", "")) %>%
@@ -25,7 +25,7 @@ levels(indcomponents2$issue) <- str_replace_all(levels(indcomponents2$issue), "\
 levels(indcomponents2$indicator) <- str_replace_all(levels(indcomponents2$indicator), "\"", "")
 levels(indcomponents2$indno) <-  str_match(levels(indcomponents2$indno), "[0-9]+")
 
-indintegrated <- read.csv("/home/adh/ASI/checklist/indicator-integratedissue.csv", header=T)
+indintegrated <- read.csv("./data/indicator-integratedissue.csv", header=T)
 indintegrated2 <- indintegrated %>%
   #mutate(indno = str_match(indcatorURI, "[0-9]+")) %>%
   mutate(indno = indcatorURI) %>%
@@ -37,7 +37,7 @@ levels(indintegrated2$issue) <- str_replace_all(levels(indintegrated2$issue), "\
 levels(indintegrated2$indicator) <- str_replace_all(levels(indintegrated2$indicator), "\"", "")
 levels(indintegrated2$indno) <-  str_match(levels(indintegrated2$indno), "[0-9]+")
 
-integratedcomponent <- read.csv("/home/adh/ASI/checklist/int_comp_issues.csv", header=T)
+integratedcomponent <- read.csv("./data/int_comp_issues.csv", header=T)
 integratedcomponent2 <- integratedcomponent %>%
 #   mutate(component = str_replace_all(component, "\"", "")) %>%                    
 #   mutate(integrated = str_replace_all(integrated, "\"", "")) %>%                                        

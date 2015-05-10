@@ -49,8 +49,10 @@ library(stringr)
 
 # 30 December 2014
 # now based on SPARQL output...
-createchecklist <- function(indvect, issuevect, issueindmat) {
+createchecklist <- function(indvect, issuevect, issueindmat, requireds, excludeds) {
   dirvect <- rep(">=", length(issuevect))
+  requireds2 <- str_extract_all(requireds, "\\d+")
+  excludeds2 <- str_extract_all(excludeds, "\\d+")
   #iptest1 <- lp("min", indvect, issueindmat, dirvect, issuevect, all.bin=TRUE, num.bin.solns=1)
   iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))))
   indicatordf <- data.frame(indicators2[iptest1$solution==1])
@@ -86,7 +88,7 @@ makeissuevect <- function(issuelist, integratedonly=F) {
 
 
 shinyServer(function(input, output) {
-  output$indicatorResults <- renderTable(createchecklist(indvect2, makeissuevect(input$issuevect, integratedonly=T), issueindmat2)) 
+  output$indicatorResults <- renderTable(createchecklist(indvect2, makeissuevect(input$issuevect, integratedonly=T), issueindmat2, input$requireds, input$excludeds)) 
   
 })
 
