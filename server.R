@@ -47,12 +47,40 @@ library(stringr)
 #   
 # })
 
+
+# From vector of indicator numbers, get indices of vectors
+getindicatorvectnos <- function(indidstr) {
+  vectidstr <- str_extract_all(indidstr, "\\d+")[[1]]
+  indnames <- as.character(values(indicatorinvdict[vectidstr[has.key(vectidstr, indicatorinvdict)]]))
+  vectindices <- match(indnames, indicators2)
+  vectindices
+}
+
+# Create list for Rsymphony call
+makeboundslist <- function(requireds, excludeds){
+  requiredids <- NULL
+  excludedids <- NULL
+  if(nchar(requireds) > 0) {
+    requiredids <- getindicatorvectnos(requireds)
+  }
+  if(nchar(excludeds) > 0) {
+    excludedids <- getindicatorvectnos(excludeds)
+  }
+  indlist <- c(requiredids, excludedids)
+  vallist <- c(rep(1, length(requiredids)), rep(0, length(excludedids)))
+  if(length(indlist) == 0) {bounds <- NULL}
+  else {
+    bounds <- list(lower = list(ind=indlist, val=vallist),
+                   upper = list(ind=indlist, val=vallist))
+  }
+  bounds
+}
+
+
 # 30 December 2014
 # now based on SPARQL output...
 createchecklist <- function(indvect, issuevect, issueindmat, requireds, excludeds) {
   dirvect <- rep(">=", length(issuevect))
-  requireds2 <- str_extract_all(requireds, "\\d+")
-  excludeds2 <- str_extract_all(excludeds, "\\d+")
   #iptest1 <- lp("min", indvect, issueindmat, dirvect, issuevect, all.bin=TRUE, num.bin.solns=1)
   iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))))
   indicatordf <- data.frame(indicators2[iptest1$solution==1])
@@ -88,8 +116,8 @@ makeissuevect <- function(issuelist, integratedonly=F) {
 
 
 shinyServer(function(input, output) {
-  output$indicatorResults <- renderTable(createchecklist(indvect2, makeissuevect(input$issuevect, integratedonly=T), issueindmat2, input$requireds, input$excludeds)) 
-  
+  output$indicatorResults <- renderTable(
+    createchecklist(indvect2, makeissuevect(input$issuevect, integratedonly=T), issueindmat2, input$requireds, input$excludeds))
 })
 
 # 12 April 2015. How to turn this into a real application? First off, need to deal with turning on and off indicators.

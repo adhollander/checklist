@@ -20,7 +20,8 @@ shinyUI(pageWithSidebar(
   mainPanel(
     tableOutput("indicatorResults"),
     textInput("requireds", "Required Indicators"),
-    textInput("excludeds", "Excluded Indicators")
+    textInput("excludeds", "Excluded Indicators"),
+    submitButton(text="Calculate Checklist")
   )
 ))
 
