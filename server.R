@@ -82,7 +82,10 @@ makeboundslist <- function(requireds, excludeds){
 createchecklist <- function(indvect, issuevect, issueindmat, requireds, excludeds) {
   dirvect <- rep(">=", length(issuevect))
   #iptest1 <- lp("min", indvect, issueindmat, dirvect, issuevect, all.bin=TRUE, num.bin.solns=1)
-  iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))))
+  # okay, here goes with the bounds stuff
+  bounds <- makeboundslist(requireds, excludeds)
+  #
+  iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
   indicatordf <- data.frame(indicators2[iptest1$solution==1])
   colnames(indicatordf)[1] <- "Indicator"
   indicatordf2 <- indicatordf %>%
