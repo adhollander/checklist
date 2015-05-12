@@ -7,7 +7,8 @@
 
 library(shiny)
 #library(lpSolve)
-library(Rsymphony)
+#library(Rsymphony)
+library(Rglpk)
 library(dplyr)
 library(tidyr)
 library(stringr)
@@ -84,17 +85,18 @@ createchecklist <- function(indvect, issuevect, issueindmat, requireds, excluded
   #iptest1 <- lp("min", indvect, issueindmat, dirvect, issuevect, all.bin=TRUE, num.bin.solns=1)
   # okay, here goes with the bounds stuff
   bounds <- makeboundslist(requireds, excludeds)
-  if(nchar(excludeds) > 0) {
-    excludedidx <- getindicatorvectnos(excludeds)}
-  else {excludedidx <- NULL}
-  issueindmat2b <- issueindmat
-  for(j in excludedidx) {
-    linkedinds <- issueindmat2b[,j] == 1
-    issueindmat2b[linkedinds,j] <- vlargecost
-  }
+  #if(nchar(excludeds) > 0) {
+  #  excludedidx <- getindicatorvectnos(excludeds)}
+  #else {excludedidx <- NULL}
+  #issueindmat2b <- issueindmat
+  #for(j in excludedidx) {
+  #  linkedinds <- issueindmat2b[,j] == 1
+  #  issueindmat2b[linkedinds,j] <- vlargecost
+  #}
   #
-  print(issueindmat2b[,1])
-  iptest1 <- Rsymphony_solve_LP(indvect, issueindmat2b, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
+  #print(issueindmat2b[,1])
+  #iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
+  iptest1 <- Rglpk_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
   indicatordf <- data.frame(indicators2[iptest1$solution==1])
   colnames(indicatordf)[1] <- "Indicator"
   indicatordf2 <- indicatordf %>%
@@ -149,3 +151,4 @@ shinyServer(function(input, output) {
 # 12 May 2015. The bounds stuff half works, doesn't function correctly for excludeds. Suspect a lower-level bug. Let's try a workaround
 # of making the costs of the excludeds very high.
 # This doesn't help either....
+# Look, Rglpk has the same interface function! Maybe I should try that instead.
