@@ -69,3 +69,5 @@ integrateds <- unique(select(integratedcomponent2, integrated))$integrated
 # 12 April 2015
 # we'll want to go from indicator id to the indicator name.
 indicatorinvdict <- hash(indicators15$indno, indicators15$indicator)
+
+vlargecost <- 1000000
