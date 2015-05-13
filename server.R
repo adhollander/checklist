@@ -7,8 +7,8 @@
 
 library(shiny)
 #library(lpSolve)
-#library(Rsymphony)
-library(Rglpk)
+library(Rsymphony)
+#library(Rglpk)
 library(dplyr)
 library(tidyr)
 library(stringr)
@@ -68,7 +68,7 @@ makeboundslist <- function(requireds, excludeds){
     excludedids <- getindicatorvectnos(excludeds)
   }
   indlist <- c(requiredids, excludedids)
-  vallist <- c(rep(1, length(requiredids)), rep(0, length(excludedids)))
+  vallist <- c(rep(1L, length(requiredids)), rep(0L, length(excludedids)))
   if(length(indlist) == 0) {bounds <- NULL}
   else {
     bounds <- list(lower = list(ind=indlist, val=vallist),
@@ -95,8 +95,8 @@ createchecklist <- function(indvect, issuevect, issueindmat, requireds, excluded
   #}
   #
   #print(issueindmat2b[,1])
-  #iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
-  iptest1 <- Rglpk_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
+  iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
+  #iptest1 <- Rglpk_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
   indicatordf <- data.frame(indicators2[iptest1$solution==1])
   colnames(indicatordf)[1] <- "Indicator"
   indicatordf2 <- indicatordf %>%
