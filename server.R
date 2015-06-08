@@ -77,6 +77,30 @@ makeboundslist <- function(requireds, excludeds){
   bounds
 }
 
+makeboundslist2 <- function(indvect, requireds, excludeds){
+  requiredids <- NULL
+  excludedids <- NULL
+  if(nchar(requireds) > 0) {
+    requiredids <- getindicatorvectnos(requireds)
+  }
+  if(nchar(excludeds) > 0) {
+    excludedids <- getindicatorvectnos(excludeds)
+  }
+  indlist <- c(requiredids, excludedids)
+  indvect2 <- seq(1, length(indvect))
+  vallistlower <- rep(0L, length(indvect))
+  vallistlower[requiredids] <- 1L
+  vallisthigher <- rep(Inf, length(indvect))
+  vallisthigher[excludedids] <- 0L
+  vallist <- c(rep(1L, length(requiredids)), rep(0L, length(excludedids)))
+  if(length(indlist) == 0) {bounds <- NULL}
+  else {
+    bounds <- list(lower = list(ind=indvect2, val=vallistlower),
+                   upper = list(ind=indvect2, val=vallisthigher))
+  }
+  bounds
+}
+
 
 # 30 December 2014
 # now based on SPARQL output...
@@ -84,7 +108,9 @@ createchecklist <- function(indvect, issuevect, issueindmat, requireds, excluded
   dirvect <- rep(">=", length(issuevect))
   #iptest1 <- lp("min", indvect, issueindmat, dirvect, issuevect, all.bin=TRUE, num.bin.solns=1)
   # okay, here goes with the bounds stuff
-  bounds <- makeboundslist(requireds, excludeds)
+  #bounds <- makeboundslist(requireds, excludeds)
+  bounds <- makeboundslist2(indvect, requireds, excludeds)
+  #print(bounds)
   #if(nchar(excludeds) > 0) {
   #  excludedidx <- getindicatorvectnos(excludeds)}
   #else {excludedidx <- NULL}
@@ -95,7 +121,7 @@ createchecklist <- function(indvect, issuevect, issueindmat, requireds, excluded
   #}
   #
   #print(issueindmat2b[,1])
-  iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
+  iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds, verbosity = 5)
   #iptest1 <- Rglpk_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
   indicatordf <- data.frame(indicators2[iptest1$solution==1])
   colnames(indicatordf)[1] <- "Indicator"

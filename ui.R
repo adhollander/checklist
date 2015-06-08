@@ -12,7 +12,7 @@ shinyUI(pageWithSidebar(
   # Application title
   headerPanel("Prototype of Checklist Generator Prototype"),
   
-  # Sidebar with a slider input for number of bins
+  # Sidebar 
   sidebarPanel(
     checkboxGroupInput("issuevect", label=NULL, choices=(integrateds = levels(integrateds)), selected=integrateds)),
                                           # formerly issues2 ^
