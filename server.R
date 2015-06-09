@@ -179,3 +179,7 @@ shinyServer(function(input, output) {
 # of making the costs of the excludeds very high.
 # This doesn't help either....
 # Look, Rglpk has the same interface function! Maybe I should try that instead.
+
+# 9 June 2015
+# Have created a branch for testing out the approach of deleting columns from
+# the matrix for the excludes.
