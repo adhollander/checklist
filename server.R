@@ -121,7 +121,8 @@ createchecklist <- function(indvect, issuevect, issueindmat, requireds, excluded
   #}
   #
   #print(issueindmat2b[,1])
-  iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds, verbosity = 5)
+  #iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds, verbosity = 5)
+  iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
   #iptest1 <- Rglpk_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
   indicatordf <- data.frame(indicators2[iptest1$solution==1])
   colnames(indicatordf)[1] <- "Indicator"
