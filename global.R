@@ -71,3 +71,8 @@ integrateds <- unique(select(integratedcomponent2, integrated))$integrated
 indicatorinvdict <- hash(indicators15$indno, indicators15$indicator)
 
 vlargecost <- 1000000
+
+# 17 June 2015
+names(indicators2) <- as.character(sapply(indicators2, function(x) indicatordict[[x]]))
+colnames(issueindmat2) <- names(indicators2)
+names(indvect2) <- names(indicators2)

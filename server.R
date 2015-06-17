@@ -183,3 +183,8 @@ shinyServer(function(input, output) {
 # 9 June 2015
 # Have created a branch for testing out the approach of deleting columns from
 # the matrix for the excludes.
+
+# 17 June 2015
+# Pondering the Rsymphony bug workaround. It's now easy for me in createchecklist to
+# pull out the excluded indicators from indvect and issueindmat, thus subsetting
+# the data sent onto Symphony, but how do I deal with the return values. What are they?
