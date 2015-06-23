@@ -5,6 +5,10 @@
 # http://www.rstudio.com/shiny/
 #
 
+# FIXME:
+# * Handle invalid required/excluded codes gracefully.
+# * Fix error when no boxes are checked (marked below).
+
 library(shiny)
 #library(lpSolve)
 library(Rsymphony)
@@ -124,6 +128,7 @@ createchecklist <- function(indvect, issuevect, issueindmat, requireds, excluded
   #iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds, verbosity = 5)
   iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
   #iptest1 <- Rglpk_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
+  # FIXME: Error when no boxes are checked.
   indicatordf <- data.frame(indicators2[iptest1$solution==1])
   colnames(indicatordf)[1] <- "Indicator"
   indicatordf2 <- indicatordf %>%
