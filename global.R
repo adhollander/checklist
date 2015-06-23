@@ -1,73 +1,125 @@
-library(dplyr)
+# Description:
+#   Read indicator-issue data from files and set up global variables.
+
+# TODO:
+# * Convert to a standalone script for making .rds files that can be loaded and
+#   used without extra processing.
+# * Migrate any processing steps that are currently in server.R.
+
 library(stringr)
-library(reshape2)
 library(hash)
 
-colclassvect <- c("character", rep.int("integer", 362))
-indissues <- read.csv("./data/grandmatrix.csv", header=T, sep="|", colClasses=colclassvect) 
-indicators <- indissues$Indicator
-issueindmat <- t(as.matrix(indissues[, 2:363], ncol=362))
-indvect <- rep(1,2066) # all indicators fair game to begin with.
-issues <- colnames(indissues)[2:363]
+main <- function()
+{
+  integrated_issues <- read_issues("data/indicator-componentissue.csv",
+    fields = c(
+      indno = "indicatorURI",
+      indicator = "indicator",
+      issue = "component"
+    ))
 
-# 29 December 2014
-# hokay...let's work with SPARQL exports from the actual RDF graph. 
-indcomponents <- read.csv("./data/indicator-componentissue.csv", header=T)
-indcomponents2 <- indcomponents %>%
-#  mutate(indno = str_match(indicatorURI, "[0-9]+")) %>%
-#  mutate(issue = str_replace_all(component, "\"", "")) %>%
-#  mutate(indicator = str_replace_all(indicator, "\"", "")) %>%
-#  mutate(indno = str_match(indicatorURI, "[0-9]+")) %>%
-  mutate(indno = indicatorURI) %>%
-  mutate(issue = component) %>%
-  select(indno, indicator, issue)
-levels(indcomponents2$issue) <- str_replace_all(levels(indcomponents2$issue), "\"", "")
-levels(indcomponents2$indicator) <- str_replace_all(levels(indcomponents2$indicator), "\"", "")
-levels(indcomponents2$indno) <-  str_match(levels(indcomponents2$indno), "[0-9]+")
+  component_issues <- read_issues("data/indicator-integratedissue.csv",
+    fields = c(
+      indno = "indcatorURI",
+      indicator = "indicator",
+      issue = "integrated"
+    ))
 
-indintegrated <- read.csv("./data/indicator-integratedissue.csv", header=T)
-indintegrated2 <- indintegrated %>%
-  #mutate(indno = str_match(indcatorURI, "[0-9]+")) %>%
-  mutate(indno = indcatorURI) %>%
-#  mutate(issue = str_replace_all(integrated, "\"", "")) %>%
-#  mutate(indicator = str_replace_all(indicator, "\"", "")) %>% 
-  mutate(issue = integrated) %>%
-  select(indno, indicator, issue)
-levels(indintegrated2$issue) <- str_replace_all(levels(indintegrated2$issue), "\"", "")
-levels(indintegrated2$indicator) <- str_replace_all(levels(indintegrated2$indicator), "\"", "")
-levels(indintegrated2$indno) <-  str_match(levels(indintegrated2$indno), "[0-9]+")
+  issue_hierarchy <- read_issues("data/int_comp_issues.csv",
+    fields = c(
+      component = "component",
+      integrated = "integrated"
+    ))
 
-integratedcomponent <- read.csv("./data/int_comp_issues.csv", header=T)
-integratedcomponent2 <- integratedcomponent %>%
-#   mutate(component = str_replace_all(component, "\"", "")) %>%                    
-#   mutate(integrated = str_replace_all(integrated, "\"", "")) %>%                                        
-   select(component, integrated)
-levels(integratedcomponent2$component) <- str_replace_all(levels(integratedcomponent2$component), "\"", "")
-levels(integratedcomponent2$integrated) <- str_replace_all(levels(integratedcomponent2$integrated), "\"", "")
+  all_issues <- rbind(component_issues, integrated_issues)
 
+  # Make the issue-indicator matrix.
+  # Formerly `acast(all_issues, issue ~ indicator)` using reshape2.
+  issue_indicator_matrix <- table(all_issues$issue, all_issues$indicator)
+  # There seems to be a bug with as.matrix() for tables.
+  class(issue_indicator_matrix) <- "matrix"
 
-# do i need to strip out the quotes from these or not?
+  # Make the issues vector and indicators vector.
+  issues <- rownames(issue_indicator_matrix)
+  indicators <- colnames(issue_indicator_matrix)
 
-indissuesdf1 <- rbind(indcomponents2, indintegrated2)
+  # Make the indicator number dictionary.
+  uniq_ind <- unique(all_issues[c("indicator", "indno")])
+  indicator_dict <- hash(keys = uniq_ind$indicator, values = uniq_ind$indno)
 
-issueindmat2 <- acast(indissuesdf1, issue ~ indicator)
+  # Map to the old globals until the server code is refactored.
+  integratedcomponent2 <<- issue_hierarchy
+  issueindmat2 <<- issue_indicator_matrix
+  issues2 <<- issues
+  indicators2 <<- indicators
+  indicatordict <<- indicator_dict
 
-issues2 <- rownames(issueindmat2)
-indicators2 <- colnames(issueindmat2)
+  integrateds <<- unique(issue_hierarchy$integrated)
+  indvect2 <<- rep(1, 2017)
+}
 
-indicators15 <- unique(select(indissuesdf1, indno, indicator))
-indicatordict <- hash(indicators15$indicator, indicators15$indno)
-indvect2 <- rep(1,2017)
-colclassvect2 <- c("character", rep.int("integer", 359))
-integrateds <- unique(select(integratedcomponent2, integrated))$integrated
+read_issues <- function(file, fields, header = TRUE, ...)
+  # Read an issues file.
+  #
+  # This function reads a CSV format issues file. The fields argument should be
+  # a named vector of columns (fields) to read. The names on the fields
+  # argument are used as column names in the resulting data frame. Any column
+  # named "indno" is reduced to numbers (this is purely for convenience and is
+  # not a robust design).
+  #
+  # Args:
+  #   file    file to read
+  #   fields  named vector of columns to read
+  #   header
+  #   ...     additional arguments to read.csv
+{
+  issues <- read.csv(file, stringsAsFactors = FALSE, header = header, ...)
 
-# 19 February 2015. Broke the code in a dplyr update...
-# it doesn't like these str_replace_alls on the factors.
-# I can fix this outside of dplyr by levels(a$b) <- str_replace_all(levels(a$b))
-# ... An improvement, but I don't have integrated issue names anymore. 
+  # Select and rename the specified fields.
+  issues <- issues[fields]
+  names(issues) <- names(fields)
 
-# 12 April 2015
-# we'll want to go from indicator id to the indicator name.
-indicatorinvdict <- hash(indicators15$indno, indicators15$indicator)
+  # Remove quotes from indicators and issues.
+  char_columns <- sapply(issues, is.character)
+  issues[char_columns] <- lapply(issues[char_columns], str_remove, '"')
 
-vlargecost <- 1000000
+  # If necessary, extract indicator number from URI.
+  if ("indno" %in% names(issues)) {
+    issues$indno <- as.integer(str_match(issues$indno, "[0-9]+"))
+  }
+
+  return(issues)
+}
+
+str_remove <- function(string, pattern)
+  # Remove all pattern matches from a string.
+{
+  str_replace_all(string, pattern, "")
+}
+
+# FIXME: Deprecated
+read_issue_indicator_matrix <- function()
+  # Read the matrix of issues vs indicators.
+  #
+  # The grandmatrix.csv has indicators vs issues, 
+{
+  # Number of issues.
+  n_issues <- 362
+
+  colClasses <- c("character", rep.int("integer", n_issues))
+  raw_matrix <- read.delim("data/grandmatrix.csv", header=TRUE
+    , sep="|", colClasses=colClasses)
+
+  n_indicators <- nrow(raw_matrix)
+
+  # Get indicators from first column "Indicator" and issues from remaining
+  # column names.
+  indicators <- raw_matrix[[1]]
+  issues <- colnames(raw_matrix)[-1]
+
+  # Get the matrix.
+  mat <- as.matrix(raw_matrix[-1])
+  mat <- t(mat)
+}
+
+main()

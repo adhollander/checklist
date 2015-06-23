@@ -14,7 +14,7 @@ shinyUI(pageWithSidebar(
   
   # Sidebar 
   sidebarPanel(
-    checkboxGroupInput("issuevect", label=NULL, choices=(integrateds = levels(integrateds)), selected=integrateds)),
+    checkboxGroupInput("issuevect", label=NULL, choices=(integrateds = integrateds), selected=integrateds)),
                                           # formerly issues2 ^
   # Show a text list of indicators
   mainPanel(
