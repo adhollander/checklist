@@ -10,7 +10,7 @@ library(shiny)
 shinyUI(pageWithSidebar(
   
   # Application title
-  headerPanel("Prototype of Checklist Generator Prototype"),
+  headerPanel("Checklist Generator Prototype"),
   
   # Sidebar 
   sidebarPanel(
