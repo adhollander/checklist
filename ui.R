@@ -10,7 +10,7 @@ library(shinyTree)
 shinyUI(fluidPage(
   
   # Application title.
-  titlePanel("Prototype of Checklist Generator"),
+  titlePanel("Checklist Generator Prototype"),
   
   sidebarLayout(
     # Sidebar, with tree of issues.
