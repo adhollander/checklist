@@ -1,28 +1,38 @@
-
-# This is the user-interface definition of a Shiny web application.
-# You can find out more about building applications with Shiny here:
-# 
-# http://www.rstudio.com/shiny/
+# Description:
+#   User interface for the checklist app.
 #
+# Usage:
+#   runApp("checklist/")
 
 library(shiny)
+library(shinyTree)
 
-shinyUI(pageWithSidebar(
+shinyUI(fluidPage(
   
-  # Application title
-  headerPanel("Prototype of Checklist Generator Prototype"),
+  # Application title.
+  titlePanel("Prototype of Checklist Generator"),
   
-  # Sidebar 
-  sidebarPanel(
-    checkboxGroupInput("issuevect", label=NULL, choices=(integrateds = integrateds), selected=integrateds)),
-                                          # formerly issues2 ^
-  # Show a text list of indicators
-  mainPanel(
-    tableOutput("indicatorResults"),
-    textInput("requireds", "Required Indicators"),
-    textInput("excludeds", "Excluded Indicators"),
-    submitButton(text="Calculate Checklist")
+  sidebarLayout(
+    # Sidebar, with tree of issues.
+    sidebarPanel(
+      width = 5,
+      selectInput("filter", "Filter By",
+        c("All Issues", "Impact Framework", "Vulnerability Framework")),
+      div(
+        style = "overflow-y: scroll; max-height: 75vh",
+        shinyTree("tree", checkbox = TRUE)
+      )
+    ),
+
+    # Main panel, with list of indicators.
+    mainPanel(
+      width = 7,
+      wellPanel(
+        textInput("required", "Required Indicators"),
+        textInput("excluded", "Excluded Indicators"),
+        submitButton(text="Calculate Checklist")
+      ),
+      tableOutput("indicatorResults")
+    )
   )
 ))
-
-# run with runApp("~/ASI/checklist/shiny")

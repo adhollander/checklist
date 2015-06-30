@@ -1,11 +1,6 @@
 # Description:
 #   Prepare RDS files from raw indicator-issue data.
 
-# TODO:
-# * Convert to a standalone script for making .rds files that can be loaded and
-#   used without extra processing.
-# * Migrate any processing steps that are currently in server.R.
-
 library(stringr)
 library(hash)
 
@@ -14,21 +9,21 @@ CACHE_DIR <- "data/cache"
 
 populate_cache <- function()
 {
-  integrated_issues <- read_issues("data/indicator-componentissue.csv",
-    fields = c(
-      indno = "indicatorURI",
-      indicator = "indicator",
-      issue = "component"
-    ))
-
-  component_issues <- read_issues("data/indicator-integratedissue.csv",
+  integrated_issues <- read_issues("data/indicator-integratedissue.csv",
     fields = c(
       indno = "indcatorURI",
       indicator = "indicator",
       issue = "integrated"
     ))
 
-  issue_hierarchy <- read_issues("data/int_comp_issues.csv",
+  component_issues <- read_issues("data/indicator-componentissue.csv",
+    fields = c(
+      indno = "indicatorURI",
+      indicator = "indicator",
+      issue = "component"
+    ))
+
+  issue_taxonomy <- read_issues("data/int_comp_issues.csv",
     fields = c(
       component = "component",
       integrated = "integrated"
@@ -36,27 +31,42 @@ populate_cache <- function()
 
   all_issues <- rbind(component_issues, integrated_issues)
 
+  # Make the issue tree.
+  ordering <- order(issue_taxonomy$integrated, issue_taxonomy$component)
+  issue_taxonomy <- issue_taxonomy[ordering, ]
+  issue_tree <- create_tree(issue_taxonomy)
+
   # Make the issue-indicator matrix.
   # Formerly `acast(all_issues, issue ~ indicator)` using reshape2.
   issue_indicator_matrix <- table(all_issues$issue, all_issues$indicator)
   # There seems to be a bug with as.matrix() for tables.
   class(issue_indicator_matrix) <- "matrix"
 
-  # Make the indicator number dictionary.
-  uniq_ind <- unique(all_issues[c("indicator", "indno")])
-  indicator_dict <- hash(keys = uniq_ind$indicator,
-      values = uniq_ind$indno)
+  # Get all unique (indno, indicator) pairs.
+  indicator_df <- unique(all_issues[c("indno", "indicator")])
+  indicator_df <- indicator_df[order(indicator_df$indicator), ]
+
+  # Make a dictionary mapping indno -> issue-indicator matrix column.
+  matched <- match(indicator_df$indicator, colnames(issue_indicator_matrix))
+  indicator_dict <- hash(keys = indicator_df$indno, values = matched)
+
+  # Make a data frame of indicator info, for printing.
+  rownames(indicator_df) <- NULL
+  colnames(indicator_df) <- c("ID", "Indicator")
+  indicator_df <- indicator_df[!duplicated(indicator_df$Indicator), ]
 
   # Save the RDS files.
   if (!dir.exists(CACHE_DIR))
       dir.create(CACHE_DIR)
 
+  saveRDS(issue_tree,
+    file.path(CACHE_DIR, "issue_tree.rds"))
   saveRDS(issue_indicator_matrix, 
     file.path(CACHE_DIR, "issue_indicator_matrix.rds"))
   saveRDS(indicator_dict,
     file.path(CACHE_DIR, "indicator_dict.rds"))
-  saveRDS(issue_hierarchy,
-    file.path(CACHE_DIR, "issue_hierarchy.rds"))
+  saveRDS(indicator_df, 
+    file.path(CACHE_DIR, "indicator_df.rds"))
 }
 
 
@@ -94,8 +104,34 @@ read_issues <- function(file, fields, header = TRUE, ...)
 }
 
 
+create_tree <- function(issue_taxonomy)
+  # Create a tree from an issue taxonomy.
+  #
+  # Args:
+  #   issue_taxonomy
+{
+  # Create a branch for each integrated issue.
+  tree <- split(issue_taxonomy$component, issue_taxonomy$integrated)
+
+  # Convert each branch to a named list of 0s.
+  # (this is the format the shinyTree widget uses)
+  tree <- lapply(tree, function(issues) {
+    branch <- numeric(length(issues))
+    names(branch) <- issues
+
+    as.list(branch)
+  })
+
+  list("All Issues" = structure(tree, stopened = TRUE))
+}
+
+
 str_remove <- function(string, pattern)
   # Remove all pattern matches from a string.
+  #
+  # Args:
+  #   string
+  #   pattern
 {
   str_replace_all(string, pattern, "")
 }

@@ -3,36 +3,40 @@
 
 source("prepare_data.R")
 
-main <- function()
+
+initialize_globals <- function()
 {
   if (!dir.exists("data/cache"))
     # Regenerate the cached RDS files.
     populate_cache()
 
   # Read the cached RDS files.
+  issue_tree <- readRDS(
+    file.path(CACHE_DIR, "issue_tree.rds"))
   issue_indicator_matrix <- readRDS(
     file.path(CACHE_DIR, "issue_indicator_matrix.rds"))
+  indicator_df <- readRDS(
+    file.path(CACHE_DIR, "indicator_df.rds"))
   indicator_dict <- readRDS(
     file.path(CACHE_DIR, "indicator_dict.rds"))
-  issue_hierarchy <- readRDS(
-    file.path(CACHE_DIR, "issue_hierarchy.rds"))
 
-  # Make the issues vector and indicators vector.
+  #issue_taxonomy <- readRDS(
+  #  file.path(CACHE_DIR, "issue_taxonomy.rds"))
+
+  # Make the match vector.
+  # TODO: Cache this vector.
   issues <- rownames(issue_indicator_matrix)
-  indicators <- colnames(issue_indicator_matrix)
+  integrated_lookup <<- match(names(issue_tree[[1]]), issues)
 
-  # TODO: Old globals, to be renamed.
-  issueindmat2 <<- issue_indicator_matrix
-  issues2 <<- issues
-  indicators2 <<- indicators
+  components <- lapply(issue_tree[[1]], names)
+  components <- unlist(components, use.names = FALSE)
+  component_lookup <<- match(components, issues)
 
-  indicatordict <<- indicator_dict
-
-  integratedcomponent2 <<- issue_hierarchy
-  integrateds <<- unique(issue_hierarchy$integrated)
-
-  indvect2 <<- rep(1, 2017)
-
+  # New globals.
+  issue_tree <<- issue_tree
+  issue_indicator_matrix <<- issue_indicator_matrix
+  indicator_dict <<- indicator_dict
+  indicator_df <<- indicator_df
 }
 
-main()
+initialize_globals()
