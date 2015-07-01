@@ -151,7 +151,7 @@ shinyServer(function(input, output) {
   # Display the indicator table.
   output$indicatorResults <- renderTable({
     create_checklist(selected_issues(), bounds())
-  })
+  }, include.rownames = FALSE)
 
   # Display the issue tree.
   output$tree <- renderTree({

@@ -93,7 +93,7 @@ read_issues <- function(file, fields, header = TRUE, ...)
 
   # Remove quotes from indicators and issues.
   char_columns <- sapply(issues, is.character)
-  issues[char_columns] <- lapply(issues[char_columns], str_remove, '"')
+  issues[char_columns] <- lapply(issues[char_columns], clean_string)
 
   # If necessary, extract indicator number from URI.
   if ("indno" %in% names(issues)) {
@@ -126,14 +126,34 @@ create_tree <- function(issue_taxonomy)
 }
 
 
-str_remove <- function(string, pattern)
-  # Remove all pattern matches from a string.
+clean_string <- function(string)
+  # Clean the name of an issue or indicator.
   #
   # Args:
-  #   string
-  #   pattern
+  #   string  character vector
 {
-  str_replace_all(string, pattern, "")
+  # Trim leading and trailing whitespace.
+  string <- str_trim(string)
+
+  # Remove all double quotes.
+  string <- gsub('"', '', string, fixed = TRUE)
+  
+  # Convert to title case.
+  string <- gsub(
+    pattern = "(^|\\s|[/(-])([[:alpha:]])",
+    replacement = "\\1\\U\\2",
+    string,
+    perl = TRUE
+  )
+
+  # Replace " And " with " & ".
+  string <- gsub(" And ", " & ", string, fixed = TRUE)
+
+  # Replace "(Kt)" with "(kt)".
+  # TODO: Find a better fix for this.
+  string <- gsub("(Kt)", "(kt)", string, fixed = TRUE)
+
+  return(string)
 }
 
 
