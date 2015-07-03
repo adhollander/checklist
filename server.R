@@ -95,7 +95,7 @@ create_checklist <- function(selected_issues, bounds)
 
 
 get_selected_nodes <- function(tree)
-  # Get all selected nodes one level below the root.
+  # Get all selected nodes one level below the root of a tree.
   #
   # Args:
   #   tree
@@ -107,31 +107,33 @@ get_selected_nodes <- function(tree)
 }
 
 
-get_selected_issues <- function(tree)
-  # Get vector of selected issues.
+get_selected_issues <- function(tree, lookup)
+  # Get 0-1 vector of selected issues.
   #
   # Args:
   #   tree
+  #   lookup
 {
-  # Integrated issues and component issues go in separate vectors.
-  int_selected <- get_selected_nodes(tree[[1]])
-  int_selected <- unique(integrated_lookup[int_selected])
+  # Get issue-indicator matrix rows for selected integrated issues.
+  selected_int <- get_selected_nodes(tree[[1]])
+  selected_int <- unique(lookup$integrated[selected_int])
 
-  cmp_selected <- lapply(tree[[1]], 
+  # Get issue-indicator matrix rows for selected component issues.
+  selected_cmp <- lapply(tree[[1]], 
     function(int_issue) {
       if (class(int_issue) == "list")
         get_selected_nodes(int_issue)
     }
   )
-  cmp_selected <- unlist(cmp_selected)
-  cmp_selected <- unique(component_lookup[cmp_selected])
+  selected_cmp <- unlist(selected_cmp)
+  selected_cmp <- unique(lookup$component[selected_cmp])
 
-  # Lookup values and return the indicator.
-  issue_ind <- numeric(nrow(issue_indicator_matrix))
-  issue_ind[int_selected] = 1
-  issue_ind[cmp_selected] = 1
+  # Assign 1 to selected issues, and 0 otherwise.
+  selected_issues <- numeric(nrow(issue_indicator_matrix))
+  selected_issues[selected_int] = 1
+  selected_issues[selected_cmp] = 1
 
-  return(issue_ind)
+  return(selected_issues)
 }
 
 
@@ -140,7 +142,7 @@ shinyServer(function(input, output) {
   output$indicatorResults <- renderTable({
     input$calculate
 
-    selected_issues <- isolate(get_selected_issues(input$tree))
+    selected_issues <- isolate(get_selected_issues(input$tree, issue_lookup))
 
     bounds <- isolate({
       required <- parse_indicator_codes(input$required)

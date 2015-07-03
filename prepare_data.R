@@ -42,6 +42,15 @@ populate_cache <- function()
   # There seems to be a bug with as.matrix() for tables.
   class(issue_indicator_matrix) <- "matrix"
 
+  # Make the issue lookup tables.
+  issues <- rownames(issue_indicator_matrix)
+  issue_lookup <- list()
+  issue_lookup$integrated <- match(names(issue_tree[[1]]), issues)
+
+  components <- lapply(issue_tree[[1]], names)
+  components <- unlist(components, use.names = FALSE)
+  issue_lookup$component <- match(components, issues)
+
   # Get all unique (indno, indicator) pairs.
   indicator_df <- unique(all_issues[c("indno", "indicator")])
   indicator_df <- indicator_df[order(indicator_df$indicator), ]
@@ -63,6 +72,9 @@ populate_cache <- function()
     file.path(CACHE_DIR, "issue_tree.rds"))
   saveRDS(issue_indicator_matrix, 
     file.path(CACHE_DIR, "issue_indicator_matrix.rds"))
+  saveRDS(issue_lookup,
+    file.path(CACHE_DIR, "issue_lookup.rds"))
+
   saveRDS(indicator_dict,
     file.path(CACHE_DIR, "indicator_dict.rds"))
   saveRDS(indicator_df, 
