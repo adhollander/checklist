@@ -136,25 +136,23 @@ get_selected_issues <- function(tree)
 
 
 shinyServer(function(input, output) {
-  # Cache selected issues.
-  selected_issues <- reactive({
-    get_selected_issues(input$tree)
-  })
-
-  # Cache bounds for required and excluded indicators.
-  bounds <- reactive({
-    required <- parse_indicator_codes(input$required)
-    excluded <- parse_indicator_codes(input$excluded)
-    create_bounds(required, excluded)
-  })
-
   # Display the indicator table.
   output$indicatorResults <- renderTable({
-    create_checklist(selected_issues(), bounds())
+    input$calculate
+
+    selected_issues <- isolate(get_selected_issues(input$tree))
+
+    bounds <- isolate({
+      required <- parse_indicator_codes(input$required)
+      excluded <- parse_indicator_codes(input$excluded)
+      create_bounds(required, excluded)
+    })
+
+    create_checklist(selected_issues, bounds)
   }, include.rownames = FALSE)
 
   # Display the issue tree.
   output$tree <- renderTree({
-      issue_tree
+    issue_tree[input$filter]
   })
 })

@@ -30,7 +30,7 @@ shinyUI(fluidPage(
       wellPanel(
         textInput("required", "Required Indicators"),
         textInput("excluded", "Excluded Indicators"),
-        submitButton(text="Calculate Checklist")
+        actionButton("calculate", "Calculate Checklist")
       ),
       tableOutput("indicatorResults")
     )
