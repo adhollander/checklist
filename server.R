@@ -32,6 +32,10 @@ parse_indicator_codes <- function(string)
 
 create_bounds <- function(required, excluded)
   # Create an Rsymphony bounds list for required and excluded variables.
+  #
+  # Args:
+  #   required
+  #   excluded
 {
   length_required = length(required)
   length_excluded = length(excluded)
@@ -115,11 +119,11 @@ get_selected_issues <- function(tree, lookup)
   #   lookup
 {
   # Get issue-indicator matrix rows for selected integrated issues.
-  selected_int <- get_selected_nodes(tree[[1]])
+  selected_int <- get_selected_nodes(tree)
   selected_int <- unique(lookup$integrated[selected_int])
 
   # Get issue-indicator matrix rows for selected component issues.
-  selected_cmp <- lapply(tree[[1]], 
+  selected_cmp <- lapply(tree, 
     function(int_issue) {
       if (class(int_issue) == "list")
         get_selected_nodes(int_issue)
@@ -142,7 +146,12 @@ shinyServer(function(input, output) {
   output$indicatorResults <- renderTable({
     input$calculate
 
-    selected_issues <- isolate(get_selected_issues(input$tree, issue_lookup))
+    selected_issues <- isolate({
+      selected <- get_selected_issues(input$tree[[1]], issue_lookup[[input$filter]])
+      print(which(selected == 1))
+
+      selected
+    })
 
     bounds <- isolate({
       required <- parse_indicator_codes(input$required)

@@ -6,6 +6,73 @@ library(hash)
 
 CACHE_DIR <- "data/cache"
 
+IMPACT_FRAMEWORK <- c(
+  "Agricultural Sector",
+  "Air & Climate",
+  "Biodiversity",
+  "Common Pool Resources",
+  "Deforestation",
+  "Ecosystem Services",
+  "Food Production",
+  "Governance",
+  "Human Rights",
+  "Income",
+  "Labor",
+  "Land & Soil",
+  "Markets",
+  "Nutritional Status",
+  "Participation",
+  "Poverty",
+  "Property Rights",
+  "Public Health",
+  "Safety",
+  "Sociocultural Systems",
+  "Technology",
+  "Wastes & Pollution",
+  "Water",
+  "Women & Wages"
+)
+# TODO: Uniquify
+
+VULNERABILITY_FRAMEWORK <- c(
+"Agricultural Sector",
+"Air & Climate",
+"Biodiversity",
+"Deforestation",
+"Disasters",
+"Diseases",
+"Ecosystem Services",
+"Educational Resources",
+"Energy",
+"Finance",
+"Food Production",
+"Geographical Distribution",
+"Governance",
+"Human Rights",
+"Income",
+"Inputs",
+"Institutions",
+"Labor",
+"Land & Soil",
+"Literacy",
+"Markets",
+"Nutritional Status",
+"Participation",
+"Physical Infrastructure",
+"Population Growth",
+"Population Structure",
+"Poverty",
+"Productivity",
+"Property Rights",
+"Public Health",
+"Social Structure",
+"Sociocultural Systems",
+"Technology",
+"Trade Policies",
+"Wastes & Pollution",
+"Water"
+)
+
 
 populate_cache <- function()
 {
@@ -32,9 +99,18 @@ populate_cache <- function()
   all_issues <- rbind(component_issues, integrated_issues)
 
   # Make the issue tree.
-  ordering <- order(issue_taxonomy$integrated, issue_taxonomy$component)
-  issue_taxonomy <- issue_taxonomy[ordering, ]
-  issue_tree <- create_tree(issue_taxonomy)
+  issue_taxonomy <- issue_taxonomy[
+    order(issue_taxonomy$integrated, issue_taxonomy$component), ]
+  filters <- list(
+    "All Issues" = NA,
+    "Impact Framework" = IMPACT_FRAMEWORK,
+    "Vulnerability Framework" = VULNERABILITY_FRAMEWORK
+  )
+  issue_tree <- lapply(
+    filters, filter_tree,
+    create_tree(issue_taxonomy),
+    stopened = TRUE
+  )
 
   # Make the issue-indicator matrix.
   # Formerly `acast(all_issues, issue ~ indicator)` using reshape2.
@@ -43,14 +119,10 @@ populate_cache <- function()
   class(issue_indicator_matrix) <- "matrix"
 
   # Make the issue lookup tables.
-  issues <- rownames(issue_indicator_matrix)
-  issue_lookup <- list()
-  issue_lookup$integrated <- match(names(issue_tree[[1]]), issues)
+  issue_lookup <- lapply(issue_tree, create_lookup,
+    rownames(issue_indicator_matrix))
 
-  components <- lapply(issue_tree[[1]], names)
-  components <- unlist(components, use.names = FALSE)
-  issue_lookup$component <- match(components, issues)
-
+  # FIXME:
   # Get all unique (indno, indicator) pairs.
   indicator_df <- unique(all_issues[c("indno", "indicator")])
   indicator_df <- indicator_df[order(indicator_df$indicator), ]
@@ -116,6 +188,17 @@ read_issues <- function(file, fields, header = TRUE, ...)
 }
 
 
+filter_tree <- function(filter, tree, ...)
+{
+  tree <-
+    if (is.na(filter[[1]]))
+      tree
+    else
+      tree[filter]
+
+  structure(tree, ...)
+}
+
 create_tree <- function(issue_taxonomy)
   # Create a tree from an issue taxonomy.
   #
@@ -134,7 +217,21 @@ create_tree <- function(issue_taxonomy)
     as.list(branch)
   })
 
-  list("All Issues" = structure(tree, stopened = TRUE))
+  return(tree)
+}
+
+
+create_lookup <- function(tree, issues)
+{
+  lookup <- list()
+
+  lookup$integrated <- match(names(tree), issues)
+
+  components <- lapply(tree, names)
+  components <- unlist(components, use.names = FALSE)
+  lookup$component <- match(components, issues)
+
+  return(lookup)
 }
 
 
