@@ -47,6 +47,9 @@
     + `indicator_df`: data frame of all uniquely named indicators
 
 * Filtering was added to control which integrated issues appear in each tree. 
+  Filters should be single column CSV files, with the filter name as the 
+  header. They are automatically loaded from `data/filters` (after adding new 
+  filters, you may need to delete `data/cache` to force a cache update).
 
 ### Server Logic
 
