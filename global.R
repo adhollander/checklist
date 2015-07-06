@@ -1,10 +1,11 @@
 # Description:
-#   Read RDS files into global variables.
+#   Initialize global variables.
 
 source("prepare_data.R")
 
 
 initialize_globals <- function()
+  # Initialize global variables from the cache.
 {
   if (!dir.exists("data/cache"))
     # Regenerate the cached RDS files.
@@ -23,7 +24,7 @@ initialize_globals <- function()
   indicator_dict <- readRDS(
     file.path(CACHE_DIR, "indicator_dict.rds"))
 
-  # New globals.
+  # Global variables.
   issue_tree <<- issue_tree
   issue_indicator_matrix <<- issue_indicator_matrix
   issue_lookup <<- issue_lookup

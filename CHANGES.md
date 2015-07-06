@@ -1,6 +1,75 @@
 
 # Changes
 
+## 06 July 2015 (DSI Update)
+
+### General Changes
+
+* The integer program bounds bug was caused by Rsymphony. A patch was submitted 
+  to the Rsymphony maintainer. Rsymphony >= 0.1-21 includes the patch.
+
+* Code using the dplyr and reshape2 packages was replaced with plain R code.
+  This is simpler and more robust (by reducing external dependencies).
+
+* Dead code was removed from all files. If the old code is needed, it can be 
+  retrieved through `git checkout <COMMIT NUMBER>`.
+
+* Notes on changes/progress were moved to this file.
+
+### Data Preparation
+
+* Data preparation was moved from `global.R` to `prepare_data.R`, in order to 
+  separate concerns.
+
+* Data preparation steps were converted to simple, reusable functions. Data 
+  preparation is conducted by the `populate_cache()` function.
+
+* Data caching was implemented. Global variables are initialized from a cache 
+  directory at `data/cache`. If the cache directory is missing, the cache is 
+  automatically repopulated from the raw data files. By caching global 
+  variables, we avoid unnecessary computation and improves start up time.
+
+* Five global variables are prepared by `populate_cache()`:
+
+    + `issue_tree`: list of trees to display in the tree widget, one for each 
+      filter; each is a recursive list of integrated and component issues
+
+    + `issue_lookup`: list of issue lookup tables, one for each filter; each is 
+      an integer vector of issue-indicator matrix row indices
+
+    + `issue_indicator_matrix`: matrix of issues versus indicators; that is, 
+      the left-hand side of the constraints in the integer program
+
+    + `indicator_dict`: hashmap (indicator code -> issue-indicator matrix 
+      column) for looking up required/excluded indicators
+
+    + `indicator_df`: data frame of all uniquely named indicators
+
+* Filtering was added to control which integrated issues appear in each tree. 
+
+### Server Logic
+
+* All functions in `server.R` were simplified and documented.
+
+* A bug in shinyTree prevents updating the tree widget directly. As a 
+  workaround, the server creates one tree widget for each filter, and only 
+  displays the tree widget corresponding to the active filter.
+
+### User Interface
+
+* The issue checklist was replaced with a tree widget provided by the shinyTree 
+  package.
+
+* A drop-down selection box was added to select filters for the tree.
+
+* The submit button was replaced with an action button, so that changing the 
+  active filter updates the issue tree immediately. As before, the indicator 
+  list is only updated when the button is pressed.
+
+* The sidebar was made slightly wider to accommodate the tree widget.
+
+* Deprecated Shiny functions were updated to match the current API.
+
 ---
 
 ## 12 May 2015
@@ -30,12 +99,12 @@ I hope that works. Next problem would be, how to get from indicator id numbers
 to indices of the vectors indicator id numbers to names is no problem, that's 
 another hash table (unless I get similar problems with working with these)
 ```
-match('water sources', indicators2) does this.
+match('water sources', indicators2)
 ```
-so `match(indicatorinvdict[['34']], indicators2)` works. So we create two new 
-ui elements, boxes to input indicator id numbers for included, unincluded, 
-these get referenced in the call to createchecklist, we revise createchecklist 
-so as to include these, then add the bounds parameter to the 
+does this. so `match(indicatorinvdict[['34']], indicators2)` works. So we 
+create two new ui elements, boxes to input indicator id numbers for included, 
+unincluded, these get referenced in the call to `createchecklist`, we revise 
+`createchecklist` so as to include these, then add the bounds parameter to the 
 `Rsymphony_solve_LP` call.
 
 We'll want to go from indicator id to the indicator name.

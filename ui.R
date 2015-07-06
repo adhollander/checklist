@@ -16,11 +16,10 @@ shinyUI(fluidPage(
     # Sidebar, with tree of issues.
     sidebarPanel(
       width = 5,
-      selectInput("filter", "Filter By",
-        c("All Issues", "Impact Framework", "Vulnerability Framework")),
+      selectInput("filter", "Filter By", names(issue_tree)),
       div(
         style = "overflow-y: scroll; max-height: 75vh",
-        shinyTree("tree", checkbox = TRUE)
+        uiOutput("tree_panels")
       )
     ),
 
@@ -30,7 +29,7 @@ shinyUI(fluidPage(
       wellPanel(
         textInput("required", "Required Indicators"),
         textInput("excluded", "Excluded Indicators"),
-        actionButton("calculate", "Calculate Checklist")
+        actionButton("calculate_button", "Calculate Checklist")
       ),
       tableOutput("indicatorResults")
     )

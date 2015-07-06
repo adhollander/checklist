@@ -2,8 +2,6 @@
 #   Server logic for the checklist app.
 
 # TODO:
-# * Implement tree filtering.
-# * Clean up code for and cache issue lookup table.
 # * Display human-readable error message for invalid required/excluded codes.
 
 library(shiny)
@@ -14,56 +12,58 @@ library(hash)
 library(stringr)
 
 
-parse_indicator_codes <- function(string)
-  # Parse a string of indicator codes into issue-indicator matrix columns.
-  #
-  # Args:
-  #   string  a string of indicator codes
-{
-  codes <- str_extract_all(string, "\\d+")[[1]]
-  
-  valid <- has.key(codes, indicator_dict)
+shinyServer(function(input, output) {
+  # Render the issue trees.
+  # UI tree names need to be valid JavaScript identifiers.
+  filters <- names(issue_tree)
+  ui_names <- sprintf("tree%i", seq_along(filters))
 
-  # Look up corresponding column for each indicator code.
-  if (length(valid) > 0)
-    values(indicator_dict, codes[valid])
-}
+  output$tree_panels <- renderUI({
+    mapply(create_tree_panel, filters, ui_names, SIMPLIFY = FALSE)
+  })
 
+  mapply(
+    function(filter, ui_name) {
+      output[[ui_name]] <- renderTree(issue_tree[filter])
+    }, filters, ui_names
+  )
 
-create_bounds <- function(required, excluded)
-  # Create an Rsymphony bounds list for required and excluded variables.
-  #
-  # Args:
-  #   required
-  #   excluded
-{
-  length_required = length(required)
-  length_excluded = length(excluded)
+  # Render the indicator table.
+  output$indicatorResults <- renderTable({
+    input$calculate_button
 
-  if (length_required == 0 && length_excluded == 0)
-    return(NULL)
+    # Isolate inputs, so calculations only run when the button is pressed.
+    isolate({
+      ui_name <- ui_names[[match(input$filter, filters)]]
+      tree <- input[[ui_name]][[1]]
+      lookup <- issue_lookup[[input$filter]]
 
-  bounds = list()
+      required <- parse_indicator_codes(input$required)
+      excluded <- parse_indicator_codes(input$excluded)
+    })
 
-  if (length_required > 0)
-    bounds$lower <- list(ind = required, val = rep_len(1, length_required))
+    selected_issues <- get_selected_issues(tree, lookup)
+    bounds <- create_bounds(required, excluded)
 
-  if (length_excluded > 0)
-    bounds$upper <- list(ind = excluded, val = rep_len(0, length_excluded))
+    # Uncomment to have the selected issues printed in terminal:
+    #print(rownames(issue_indicator_matrix)[selected_issues == 1])
 
-  return(bounds)
-}
+    create_checklist(selected_issues, bounds)
+  }, include.rownames = FALSE)
+})
 
 
 create_checklist <- function(selected_issues, bounds)
   # Create a table of indicators based on a vector of issues.
   # 
   # Args:
-  #   selected_issues 
-  #   bounds
+  #   selected_issues   0-1 vector of selected issues
+  #   bounds            Rsymphony-format bounds list, for required/excluded
+  #                     indicators
 {
   nrows <- nrow(issue_indicator_matrix)
 
+  # If no issues were selected, don't do anything.
   if (all(selected_issues == 0))
     return(data.frame())
 
@@ -98,31 +98,18 @@ create_checklist <- function(selected_issues, bounds)
 }
 
 
-get_selected_nodes <- function(tree)
-  # Get all selected nodes one level below the root of a tree.
-  #
-  # Args:
-  #   tree
-{
-  vapply(tree,
-    function(issue) {
-      !is.null(attr(issue, "stselected"))
-    }, TRUE)
-}
-
-
 get_selected_issues <- function(tree, lookup)
   # Get 0-1 vector of selected issues.
   #
   # Args:
-  #   tree
-  #   lookup
+  #   tree    the active tree, with the root removed (i.e., tree[[1]])
+  #   lookup  issue lookup table corresponding to the current tree
 {
-  # Get issue-indicator matrix rows for selected integrated issues.
+  # Get issue-indicator matrix row indices for selected integrated issues.
   selected_int <- get_selected_nodes(tree)
   selected_int <- unique(lookup$integrated[selected_int])
 
-  # Get issue-indicator matrix rows for selected component issues.
+  # Get issue-indicator matrix row indices for selected component issues.
   selected_cmp <- lapply(tree, 
     function(int_issue) {
       if (class(int_issue) == "list")
@@ -141,29 +128,77 @@ get_selected_issues <- function(tree, lookup)
 }
 
 
-shinyServer(function(input, output) {
-  # Display the indicator table.
-  output$indicatorResults <- renderTable({
-    input$calculate
+get_selected_nodes <- function(tree, attribute = "stselected")
+  # Get all selected nodes one level below the root of a tree.
+  #
+  # Args:
+  #   tree        tree with attributes
+  #   attribute   name of selection attribute
+{
+  vapply(tree,
+    function(issue) {
+      !is.null(attr(issue, attribute))
+    }, TRUE
+  )
+}
 
-    selected_issues <- isolate({
-      selected <- get_selected_issues(input$tree[[1]], issue_lookup[[input$filter]])
-      print(which(selected == 1))
 
-      selected
-    })
+create_bounds <- function(required, excluded)
+  # Create an Rsymphony bounds list for required and excluded indicators.
+  #
+  # Args:
+  #   required  indices vector for required indicators
+  #   excluded  indices vector for excluded indicators
+{
+  length_required = length(required)
+  length_excluded = length(excluded)
 
-    bounds <- isolate({
-      required <- parse_indicator_codes(input$required)
-      excluded <- parse_indicator_codes(input$excluded)
-      create_bounds(required, excluded)
-    })
+  if (length_required == 0 && length_excluded == 0)
+    return(NULL)
 
-    create_checklist(selected_issues, bounds)
-  }, include.rownames = FALSE)
+  bounds = list()
 
-  # Display the issue tree.
-  output$tree <- renderTree({
-    issue_tree[input$filter]
-  })
-})
+  if (length_required > 0)
+    bounds$lower <- list(ind = required, val = rep_len(1, length_required))
+
+  if (length_excluded > 0)
+    bounds$upper <- list(ind = excluded, val = rep_len(0, length_excluded))
+
+  return(bounds)
+}
+
+
+parse_indicator_codes <- function(string)
+  # Get issue-indicator matrix column indices for a string of indicator codes.
+  #
+  # Args:
+  #   string  string of indicator codes
+{
+  codes <- str_extract_all(string, "\\d+")[[1]]
+  
+  valid <- has.key(codes, indicator_dict)
+
+  # Look up corresponding column index for each indicator code.
+  if (length(valid) > 0)
+    values(indicator_dict, codes[valid])
+}
+
+
+create_tree_panel <- function(filter, ui_name)
+  # Create a conditional panel containing a tree widget.
+  #
+  # This is a workaround for a bug in shinyTree that prevents tree widgets from
+  # being updated correctly. Rather than updating the tree each time the filter
+  # is changed, we use one tree for each filter, and update which one is
+  # visible. For more details on the bug, see the shinyTree issue at:
+  #   https://github.com/trestletech/shinyTree/issues/17
+  #
+  # Args:
+  #   filter    filter for which the panel should be visible
+  #   ui_name   name for the tree widget
+{
+  conditionalPanel(
+    condition = sprintf("input.filter == '%s'", filter),
+    shinyTree(ui_name, checkbox = TRUE)
+  )
+}

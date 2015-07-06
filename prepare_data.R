@@ -1,5 +1,7 @@
 # Description:
-#   Prepare RDS files from raw indicator-issue data.
+#   Prepare cache files from raw indicator-issue data.
+# TODO:
+#   * Check input for filters (names should be unique and match known names).
 
 library(stringr)
 library(hash)
@@ -32,7 +34,6 @@ IMPACT_FRAMEWORK <- c(
   "Water",
   "Women & Wages"
 )
-# TODO: Uniquify
 
 VULNERABILITY_FRAMEWORK <- c(
 "Agricultural Sector",
@@ -75,6 +76,7 @@ VULNERABILITY_FRAMEWORK <- c(
 
 
 populate_cache <- function()
+  # Populate the cache from raw data.
 {
   integrated_issues <- read_issues("data/indicator-integratedissue.csv",
     fields = c(
@@ -98,45 +100,47 @@ populate_cache <- function()
 
   all_issues <- rbind(component_issues, integrated_issues)
 
-  # Make the issue tree.
+  # 1. Make the issue trees.
   issue_taxonomy <- issue_taxonomy[
     order(issue_taxonomy$integrated, issue_taxonomy$component), ]
+
   filters <- list(
     "All Issues" = NA,
     "Impact Framework" = IMPACT_FRAMEWORK,
     "Vulnerability Framework" = VULNERABILITY_FRAMEWORK
   )
+
   issue_tree <- lapply(
     filters, filter_tree,
     create_tree(issue_taxonomy),
     stopened = TRUE
   )
 
-  # Make the issue-indicator matrix.
-  # Formerly `acast(all_issues, issue ~ indicator)` using reshape2.
+  # 2. Make the issue-indicator matrix.
   issue_indicator_matrix <- table(all_issues$issue, all_issues$indicator)
   # There seems to be a bug with as.matrix() for tables.
   class(issue_indicator_matrix) <- "matrix"
 
-  # Make the issue lookup tables.
+  # 3. Make the issue lookup tables.
+  # These map (tree issue -> issue-indicator matrix row index).
   issue_lookup <- lapply(issue_tree, create_lookup,
     rownames(issue_indicator_matrix))
 
-  # FIXME:
   # Get all unique (indno, indicator) pairs.
   indicator_df <- unique(all_issues[c("indno", "indicator")])
   indicator_df <- indicator_df[order(indicator_df$indicator), ]
 
-  # Make a dictionary mapping indno -> issue-indicator matrix column.
+  # 4. Make the indicator dictionary.
+  # This maps (indicator code -> issue-indicator matrix column index).
   matched <- match(indicator_df$indicator, colnames(issue_indicator_matrix))
   indicator_dict <- hash(keys = indicator_df$indno, values = matched)
 
-  # Make a data frame of indicator info, for printing.
+  # 5. Make the indicator data frame, for printing output.
   rownames(indicator_df) <- NULL
   colnames(indicator_df) <- c("ID", "Indicator")
   indicator_df <- indicator_df[!duplicated(indicator_df$Indicator), ]
 
-  # Save the RDS files.
+  # Save to RDS files.
   if (!dir.exists(CACHE_DIR))
       dir.create(CACHE_DIR)
 
@@ -166,8 +170,8 @@ read_issues <- function(file, fields, header = TRUE, ...)
   # Args:
   #   file    file to read
   #   fields  named vector of columns to read
-  #   header
-  #   ...     additional arguments to read.csv
+  #   header  whether the file has a header
+  #   ...     additional arguments to read.csv()
 {
   issues <- read.csv(file, stringsAsFactors = FALSE, header = header, ...)
 
@@ -188,22 +192,11 @@ read_issues <- function(file, fields, header = TRUE, ...)
 }
 
 
-filter_tree <- function(filter, tree, ...)
-{
-  tree <-
-    if (is.na(filter[[1]]))
-      tree
-    else
-      tree[filter]
-
-  structure(tree, ...)
-}
-
 create_tree <- function(issue_taxonomy)
   # Create a tree from an issue taxonomy.
   #
   # Args:
-  #   issue_taxonomy
+  #   issue_taxonomy  data frame with columns 'component' and 'integrated'
 {
   # Create a branch for each integrated issue.
   tree <- split(issue_taxonomy$component, issue_taxonomy$integrated)
@@ -221,7 +214,30 @@ create_tree <- function(issue_taxonomy)
 }
 
 
+filter_tree <- function(filter, tree, ...)
+  # Filter nodes one level below the root of a tree.
+  #
+  # Args:
+  #   filter  names of nodes to keep
+  #   tree    tree with named nodes
+  #   ...     additional arguments to structure(), such as attributes
+{
+  tree <-
+    if (is.na(filter[[1]]))
+      tree
+    else
+      tree[filter]
+
+  structure(tree, ...)
+}
+
+
 create_lookup <- function(tree, issues)
+  # Create a lookup table matching tree nodes to a vector of issues.
+  #
+  # Args:
+  #   tree    named tree
+  #   issues  issue names (e.g., row names of the issue-indicator matrix)
 {
   lookup <- list()
 
@@ -266,7 +282,7 @@ clean_string <- function(string)
 }
 
 
-# FIXME: Deprecated
+# FIXME: This function is not used and is safe to delete.
 read_issue_indicator_matrix <- function()
   # Read the matrix of issues vs indicators.
   #
