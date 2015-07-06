@@ -1,78 +1,11 @@
 # Description:
 #   Prepare cache files from raw indicator-issue data.
-# TODO:
-#   * Check input for filters (names should be unique and match known names).
 
 library(stringr)
 library(hash)
 
 CACHE_DIR <- "data/cache"
-
-IMPACT_FRAMEWORK <- c(
-  "Agricultural Sector",
-  "Air & Climate",
-  "Biodiversity",
-  "Common Pool Resources",
-  "Deforestation",
-  "Ecosystem Services",
-  "Food Production",
-  "Governance",
-  "Human Rights",
-  "Income",
-  "Labor",
-  "Land & Soil",
-  "Markets",
-  "Nutritional Status",
-  "Participation",
-  "Poverty",
-  "Property Rights",
-  "Public Health",
-  "Safety",
-  "Sociocultural Systems",
-  "Technology",
-  "Wastes & Pollution",
-  "Water",
-  "Women & Wages"
-)
-
-VULNERABILITY_FRAMEWORK <- c(
-"Agricultural Sector",
-"Air & Climate",
-"Biodiversity",
-"Deforestation",
-"Disasters",
-"Diseases",
-"Ecosystem Services",
-"Educational Resources",
-"Energy",
-"Finance",
-"Food Production",
-"Geographical Distribution",
-"Governance",
-"Human Rights",
-"Income",
-"Inputs",
-"Institutions",
-"Labor",
-"Land & Soil",
-"Literacy",
-"Markets",
-"Nutritional Status",
-"Participation",
-"Physical Infrastructure",
-"Population Growth",
-"Population Structure",
-"Poverty",
-"Productivity",
-"Property Rights",
-"Public Health",
-"Social Structure",
-"Sociocultural Systems",
-"Technology",
-"Trade Policies",
-"Wastes & Pollution",
-"Water"
-)
+FILTERS_DIR <- "data/filters"
 
 
 populate_cache <- function()
@@ -101,20 +34,13 @@ populate_cache <- function()
   all_issues <- rbind(component_issues, integrated_issues)
 
   # 1. Make the issue trees.
-  issue_taxonomy <- issue_taxonomy[
-    order(issue_taxonomy$integrated, issue_taxonomy$component), ]
+  ordering <- order(issue_taxonomy$integrated, issue_taxonomy$component)
+  issue_taxonomy <- issue_taxonomy[ordering, ]
 
-  filters <- list(
-    "All Issues" = NA,
-    "Impact Framework" = IMPACT_FRAMEWORK,
-    "Vulnerability Framework" = VULNERABILITY_FRAMEWORK
-  )
+  filters <- append(list("All Issues" = NA), read_filters(FILTERS_DIR))
 
-  issue_tree <- lapply(
-    filters, filter_tree,
-    create_tree(issue_taxonomy),
-    stopened = TRUE
-  )
+  issue_tree <-
+    lapply(filters, filter_tree, create_tree(issue_taxonomy), stopened = TRUE)
 
   # 2. Make the issue-indicator matrix.
   issue_indicator_matrix <- table(all_issues$issue, all_issues$indicator)
@@ -123,8 +49,8 @@ populate_cache <- function()
 
   # 3. Make the issue lookup tables.
   # These map (tree issue -> issue-indicator matrix row index).
-  issue_lookup <- lapply(issue_tree, create_lookup,
-    rownames(issue_indicator_matrix))
+  issue_lookup <-
+    lapply(issue_tree, create_lookup, rownames(issue_indicator_matrix))
 
   # Get all unique (indno, indicator) pairs.
   indicator_df <- unique(all_issues[c("indno", "indicator")])
@@ -192,6 +118,42 @@ read_issues <- function(file, fields, header = TRUE, ...)
 }
 
 
+read_filters <- function(dir, ...)
+  # Read all filters in the specified directory.
+  #
+  # This function reads CSV format filters from the specified directory. Each
+  # file must end in a `.csv` extension and contain a single column of
+  # integrated issue names. The header (first row) is used as the filter name
+  # in the user interface.
+  #
+  # Args:
+  #   dir   filter directory
+  #   ...   additional arguments to read.csv()
+{
+  # Only read CSV files.
+  files <- list.files(dir, pattern = "[.][cC][sS][vV]$", full.names = TRUE)
+
+  filters <- lapply(files, function(file) {
+    # Read a filter.
+    filter <- read.csv(
+      file, check.names = FALSE, stringsAsFactors = FALSE,
+      colClasses = "character", header = TRUE, ...
+    )
+    filter <- as.list(filter[1])
+
+    # Clean issue names and remove duplicate issues.
+    filter[[1]] <- unique(clean_string(filter[[1]]))
+    
+    filter
+  })
+  
+  # Flatten the list of filters.
+  filters <- unlist(filters, recursive = FALSE)
+
+  return(filters)
+}
+
+
 create_tree <- function(issue_taxonomy)
   # Create a tree from an issue taxonomy.
   #
@@ -227,6 +189,17 @@ filter_tree <- function(filter, tree, ...)
       tree
     else
       tree[filter]
+
+  # Check for invalid integrated issues in the filter.
+  invalid_issues <- is.na(names(tree))
+  if (any(invalid_issues)) {
+    invalid_issues <- filter[invalid_issues]
+
+    lapply(invalid_issues, function(issue) {
+      msg <- sprintf("Invalid integrated issue '%s' in filter.", issue)
+      warning(msg)
+    })
+  }
 
   structure(tree, ...)
 }
