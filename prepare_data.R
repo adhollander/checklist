@@ -4,7 +4,6 @@
 #   * Check input for filters (names should be unique and match known names).
 
 library(stringr)
-library(hash)
 
 CACHE_DIR <- "data/cache"
 
@@ -130,12 +129,7 @@ populate_cache <- function()
   indicator_df <- unique(all_issues[c("indno", "indicator")])
   indicator_df <- indicator_df[order(indicator_df$indicator), ]
 
-  # 4. Make the indicator dictionary.
-  # This maps (indicator code -> issue-indicator matrix column index).
-  matched <- match(indicator_df$indicator, colnames(issue_indicator_matrix))
-  indicator_dict <- hash(keys = indicator_df$indno, values = matched)
-
-  # 5. Make the indicator data frame, for printing output.
+  # 4. Make the indicator data frame, for printing output.
   rownames(indicator_df) <- NULL
   colnames(indicator_df) <- c("ID", "Indicator")
   indicator_df <- indicator_df[!duplicated(indicator_df$Indicator), ]
@@ -151,8 +145,6 @@ populate_cache <- function()
   saveRDS(issue_lookup,
     file.path(CACHE_DIR, "issue_lookup.rds"))
 
-  saveRDS(indicator_dict,
-    file.path(CACHE_DIR, "indicator_dict.rds"))
   saveRDS(indicator_df, 
     file.path(CACHE_DIR, "indicator_df.rds"))
 }

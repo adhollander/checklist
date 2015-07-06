@@ -1,18 +1,14 @@
 # Description:
 #   Server logic for the checklist app.
 
-# TODO:
-# * Display human-readable error message for invalid required/excluded codes.
-
 library(shiny)
 library(shinyTree)
 
 library(Rsymphony)
-library(hash)
 library(stringr)
 
 
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
   # Render the issue trees.
   # UI tree names need to be valid JavaScript identifiers.
   filters <- names(issue_tree)
@@ -38,8 +34,8 @@ shinyServer(function(input, output) {
       tree <- input[[ui_name]][[1]]
       lookup <- issue_lookup[[input$filter]]
 
-      required <- parse_indicator_codes(input$required)
-      excluded <- parse_indicator_codes(input$excluded)
+      required <- match_indicators(input$required)
+      excluded <- match_indicators(input$excluded)
     })
 
     selected_issues <- get_selected_issues(tree, lookup)
@@ -168,19 +164,15 @@ create_bounds <- function(required, excluded)
 }
 
 
-parse_indicator_codes <- function(string)
-  # Get issue-indicator matrix column indices for a string of indicator codes.
+match_indicators <- function(indicators)
+  # Get issue-indicator matrix column indices for indicator names.
   #
   # Args:
-  #   string  string of indicator codes
+  #   indicators  indicator names
 {
-  codes <- str_extract_all(string, "\\d+")[[1]]
-  
-  valid <- has.key(codes, indicator_dict)
+  indices <- match(indicators, colnames(issue_indicator_matrix))
 
-  # Look up corresponding column index for each indicator code.
-  if (length(valid) > 0)
-    values(indicator_dict, codes[valid])
+  na.omit(indices)
 }
 
 

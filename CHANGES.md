@@ -11,6 +11,10 @@
 * Code using the dplyr and reshape2 packages was replaced with plain R code.
   This is simpler and more robust (by reducing external dependencies).
 
+* The hash package is no longer needed because indicator codes are not used. 
+  Since matching indicator names with `match()` does not cause noticeable 
+  performance problems, there's no need to use a hash map.
+
 * Dead code was removed from all files. If the old code is needed, it can be 
   retrieved through `git checkout <COMMIT NUMBER>`.
 
@@ -29,7 +33,7 @@
   automatically repopulated from the raw data files. By caching global 
   variables, we avoid unnecessary computation and improves start up time.
 
-* Five global variables are prepared by `populate_cache()`:
+* Four global variables are prepared by `populate_cache()`:
 
     + `issue_tree`: list of trees to display in the tree widget, one for each 
       filter; each is a recursive list of integrated and component issues
@@ -39,9 +43,6 @@
 
     + `issue_indicator_matrix`: matrix of issues versus indicators; that is, 
       the left-hand side of the constraints in the integer program
-
-    + `indicator_dict`: hashmap (indicator code -> issue-indicator matrix 
-      column) for looking up required/excluded indicators
 
     + `indicator_df`: data frame of all uniquely named indicators
 
@@ -59,6 +60,10 @@
 
 * The issue checklist was replaced with a tree widget provided by the shinyTree 
   package.
+
+* The required and excluded indicator text boxes were replaced with selectize 
+  inputs. These eliminate the need to use indicator codes and ensure the input 
+  is valid.
 
 * A drop-down selection box was added to select filters for the tree.
 

@@ -27,8 +27,20 @@ shinyUI(fluidPage(
     mainPanel(
       width = 7,
       wellPanel(
-        textInput("required", "Required Indicators"),
-        textInput("excluded", "Excluded Indicators"),
+        selectizeInput(
+          "required",
+          label = "Required Indicators",
+          choices = colnames(issue_indicator_matrix),
+          multiple = TRUE,
+          options = list(selectOnTab = TRUE, maxOptions = 5)
+        ),
+        selectizeInput(
+          "excluded",
+          label = "Excluded Indicators",
+          choices = colnames(issue_indicator_matrix),
+          multiple = TRUE,
+          options = list(selectOnTab = TRUE, maxOptions = 5)
+        ),
         actionButton("calculate_button", "Calculate Checklist")
       ),
       tableOutput("indicatorResults")

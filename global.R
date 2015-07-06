@@ -21,15 +21,12 @@ initialize_globals <- function()
 
   indicator_df <- readRDS(
     file.path(CACHE_DIR, "indicator_df.rds"))
-  indicator_dict <- readRDS(
-    file.path(CACHE_DIR, "indicator_dict.rds"))
 
   # Global variables.
   issue_tree <<- issue_tree
   issue_indicator_matrix <<- issue_indicator_matrix
   issue_lookup <<- issue_lookup
 
-  indicator_dict <<- indicator_dict
   indicator_df <<- indicator_df
 }
 
