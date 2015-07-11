@@ -191,6 +191,6 @@ create_tree_panel <- function(filter, ui_name)
 {
   conditionalPanel(
     condition = sprintf("input.filter == '%s'", filter),
-    shinyTree(ui_name, checkbox = TRUE)
+    shinyTree(ui_name, checkbox = TRUE, search = TRUE)
   )
 }

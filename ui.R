@@ -17,8 +17,9 @@ shinyUI(fluidPage(
     sidebarPanel(
       width = 5,
       selectInput("filter", "Filter By", names(issue_tree)),
-      div(
+      tags$div(
         style = "overflow-y: scroll; max-height: 75vh",
+        tags$label("Search Issues", class = "control-label"),
         uiOutput("tree_panels")
       )
     ),
