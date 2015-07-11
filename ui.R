@@ -32,14 +32,14 @@ shinyUI(fluidPage(
           label = "Required Indicators",
           choices = colnames(issue_indicator_matrix),
           multiple = TRUE,
-          options = list(selectOnTab = TRUE, maxOptions = 5)
+          options = list(selectOnTab = TRUE, maxOptions = 100)
         ),
         selectizeInput(
           "excluded",
           label = "Excluded Indicators",
           choices = colnames(issue_indicator_matrix),
           multiple = TRUE,
-          options = list(selectOnTab = TRUE, maxOptions = 5)
+          options = list(selectOnTab = TRUE, maxOptions = 100)
         ),
         actionButton("calculate_button", "Calculate Checklist")
       ),
