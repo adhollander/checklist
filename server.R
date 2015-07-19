@@ -34,6 +34,7 @@ shinyServer(function(input, output, session) {
 
     required <- match_indicators(input$required)
     excluded <- match_indicators(input$excluded)
+    excluded <- setdiff(excluded, required)
 
     bounds <- create_bounds(required, excluded)
 
@@ -185,8 +186,8 @@ create_bounds <- function(required, excluded)
   #   required  indices vector for required indicators
   #   excluded  indices vector for excluded indicators
 {
-  length_required = length(required)
-  length_excluded = length(excluded)
+  length_required <- length(required)
+  length_excluded <- length(excluded)
 
   if (length_required == 0 && length_excluded == 0)
     return(NULL)
