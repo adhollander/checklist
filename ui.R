@@ -42,7 +42,8 @@ shinyUI(fluidPage(
           multiple = TRUE,
           options = list(selectOnTab = TRUE, maxOptions = 100)
         ),
-        actionButton("calculate_button", "Calculate Checklist")
+        actionButton("calculate_button", "Calculate Checklist"),
+        downloadButton("save_button", "Save")
       ),
       tableOutput("indicatorResults")
     )

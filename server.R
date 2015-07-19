@@ -24,28 +24,67 @@ shinyServer(function(input, output, session) {
     }, filters, ui_names
   )
 
-  # Render the indicator table.
-  output$indicatorResults <- renderTable({
-    input$calculate_button
-
-    # Isolate inputs, so calculations only run when the button is pressed.
-    isolate({
-      ui_name <- ui_names[[match(input$filter, filters)]]
-      tree <- input[[ui_name]][[1]]
-      lookup <- issue_lookup[[input$filter]]
-
-      required <- match_indicators(input$required)
-      excluded <- match_indicators(input$excluded)
-    })
+  # Reactive binding for the indicator checklist (inputs and outputs).
+  get_checklist <- reactive({
+    ui_name <- ui_names[[match(input$filter, filters)]]
+    tree <- input[[ui_name]][[1]]
+    lookup <- issue_lookup[[input$filter]]
 
     selected_issues <- get_selected_issues(tree, lookup)
+
+    required <- match_indicators(input$required)
+    excluded <- match_indicators(input$excluded)
+
     bounds <- create_bounds(required, excluded)
 
     # Uncomment to have the selected issues printed in terminal:
     #print(rownames(issue_indicator_matrix)[selected_issues == 1])
 
-    create_checklist(selected_issues, bounds)
+    indicators <- create_checklist(selected_issues, bounds)
+
+    list(
+      issues = selected_issues,
+      required = required,
+      excluded = excluded,
+      indicators = indicators
+    )
+  })
+
+  # Render the indicator table.
+  output$indicatorResults <- renderTable({
+    input$calculate_button
+
+    # Isolate inputs, so calculations only run when the button is pressed.
+    isolate(get_checklist()$indicators)
   }, include.rownames = FALSE)
+
+  # Handle saving the selected issues and computed indicators.
+  output$save_button <- downloadHandler(
+    filename = function() {
+      format(Sys.time(), "%Y.%m.%d-Indicator-Checklist.zip")
+    },
+    content = function(file) {
+      checklist <- get_checklist()
+
+      # Prepare issues for saving.
+      issues <- rownames(issue_indicator_matrix)
+      selected_issues <- issues[checklist$issues == 1, drop = FALSE]
+      checklist$issues <- data.frame(Issues = selected_issues)
+
+      # Prepare indicators for saving.
+      required <- indicator_df[checklist$required, ]
+      if (nrow(required) > 0)
+        required["Status"] <- "Required"
+      excluded <- indicator_df[checklist$excluded, ]
+      if (nrow(excluded) > 0)
+        excluded["Status"] <- "Excluded"
+      checklist$indicators["Status"] <- "Included"
+
+      checklist$indicators <- rbind(checklist$indicators, required, excluded)
+
+      zip_csv(file, checklist[c("issues", "indicators")], row.names = FALSE)
+    }
+  )
 })
 
 
@@ -193,4 +232,33 @@ create_tree_panel <- function(filter, ui_name)
     condition = sprintf("input.filter == '%s'", filter),
     shinyTree(ui_name, checkbox = TRUE, search = TRUE)
   )
+}
+
+
+zip_csv <- function(file, x, flags = "-j6X", ...)
+  # Save each element of a named list to CSV files in a zip archive.
+  #
+  # By default, the files are zipped using the flags
+  #   -j  don't store full file paths
+  #   -6  default compression
+  #   -X  don't store file attributes
+  # However, these can be modified through the flags parameter.
+  #
+  # Args:
+  #   file    path to zip file
+  #   x       list with named elements
+  #   flags   command-line flags for the zip program
+  #   ...     further arguments to write.csv()
+{
+  # Set up a temporary directory.
+  temp_dir <- tempdir()
+  temp_files <- file.path(temp_dir, paste0(names(x), ".csv"))
+
+  # Write the files.
+  mapply(write.csv, x, temp_files, MoreArgs = ...)
+  zip(file, temp_files, flags = flags)
+
+  # Remove the temporary files.
+  file.remove(temp_files)
+  unlink(temp_dir)
 }
