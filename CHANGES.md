@@ -1,7 +1,24 @@
 
 # Changes
 
-## 06 July 2015 (DSI Update)
+## 19 July 2015 (DSI Update II)
+
+* A save button was added to the user interface. The currently selected issues 
+  and computed indicators, as well as any required/excluded indicators, are 
+  saved to a zip archive of CSV files.
+
+* Required indicators now override excluded indicators.
+
+* The selectize inputs for required and excluded indicators now list the 
+  closest 100 indicators as the user is typing.
+
+* Searching the issue tree was enabled.
+
+* Filters were added for capital groups. Note that this is not a sorting 
+  function; only one capital group can be used at a time.
+
+
+## 6 July 2015 (DSI Update I)
 
 ### General Changes
 
