@@ -1,6 +1,14 @@
 
 # Changes
 
+## 3 August 2015 (DSI Update III)
+
+* A checkbox was added to exclude indicators that are indices. The data source 
+  for which indicators are indices is `data/index-indicators.csv`, which should 
+  be a single-column CSV file (with header) listing the indicator codes. As 
+  usual, if you update this file, you must manually delete `data/cache` to see 
+  the changes.
+
 ## 19 July 2015 (DSI Update II)
 
 * A save button was added to the user interface. The currently selected issues 
@@ -94,8 +102,6 @@
 * The sidebar was made slightly wider to accommodate the tree widget.
 
 * Deprecated Shiny functions were updated to match the current API.
-
----
 
 ## 12 May 2015
 The bounds stuff half works, doesn't function correctly for excludeds. Suspect 

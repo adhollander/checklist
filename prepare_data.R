@@ -30,6 +30,9 @@ populate_cache <- function()
       integrated = "integrated"
     ))
 
+  index_indicators <- read.csv("data/index-indicators.csv",
+    stringsAsFactors = FALSE, header = TRUE)[[1]]
+
   all_issues <- rbind(component_issues, integrated_issues)
 
   # 1. Make the issue trees.
@@ -60,6 +63,12 @@ populate_cache <- function()
   colnames(indicator_df) <- c("ID", "Indicator")
   indicator_df <- indicator_df[!duplicated(indicator_df$Indicator), ]
 
+  # 5. Get column numbers of indicators that are indexes.
+  idx = match(index_indicators, all_issues$indno)
+  index_indicators = na.omit(all_issues$indicator[idx])
+  index_indicators = match(index_indicators, colnames(issue_indicator_matrix))
+  index_indicators = unique(index_indicators)
+
   # Save to RDS files.
   if (!dir.exists(CACHE_DIR))
       dir.create(CACHE_DIR)
@@ -73,6 +82,8 @@ populate_cache <- function()
 
   saveRDS(indicator_df, 
     file.path(CACHE_DIR, "indicator_df.rds"))
+  saveRDS(index_indicators,
+    file.path(CACHE_DIR, "index_indicators.rds"))
 }
 
 

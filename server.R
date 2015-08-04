@@ -34,6 +34,10 @@ shinyServer(function(input, output, session) {
 
     required <- match_indicators(input$required)
     excluded <- match_indicators(input$excluded)
+    # Check whether indices should be excluded.
+    if (input$exclude_indices)
+      excluded <- union(excluded, indicator_indices)
+    # Make required indicators override excluded indicators.
     excluded <- setdiff(excluded, required)
 
     bounds <- create_bounds(required, excluded)
@@ -67,12 +71,12 @@ shinyServer(function(input, output, session) {
     content = function(file) {
       checklist <- get_checklist()
 
-      # Prepare issues for saving.
+      # Put selected issues in a data frame for saving.
       issues <- rownames(issue_indicator_matrix)
       selected_issues <- issues[checklist$issues == 1, drop = FALSE]
       checklist$issues <- data.frame(Issues = selected_issues)
 
-      # Prepare indicators for saving.
+      # Put required/excluded/computed indicators in a data frame for saving.
       required <- indicator_df[checklist$required, ]
       if (nrow(required) > 0)
         required["Status"] <- "Required"

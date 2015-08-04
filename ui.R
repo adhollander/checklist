@@ -42,6 +42,7 @@ shinyUI(fluidPage(
           multiple = TRUE,
           options = list(selectOnTab = TRUE, maxOptions = 100)
         ),
+        checkboxInput("exclude_indices", label = "Exclude Indices"),
         actionButton("calculate_button", "Calculate Checklist"),
         downloadButton("save_button", "Save")
       ),
