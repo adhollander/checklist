@@ -1,181 +1,269 @@
-
-# This is the server logic for a Shiny web application.
-# You can find out more about building applications with Shiny here:
-# 
-# http://www.rstudio.com/shiny/
-#
+# Description:
+#   Server logic for the checklist app.
 
 library(shiny)
-#library(lpSolve)
+library(shinyTree)
+
 library(Rsymphony)
-#library(Rglpk)
-library(dplyr)
-library(tidyr)
 library(stringr)
 
-# createchecklist <- function(indvect, issuevect, issueindmat) {
-#   dirvect <- rep(">=", length(issuevect))
-#   iptest1 <- lp("min", indvect, issueindmat, dirvect, issuevect, all.bin=TRUE, num.bin.solns=1)
-#   indicatordf <- data.frame(indicators[iptest1$solution==1])
-#   colnames(indicatordf)[1] <- "Indicator"
-#   return(indicatordf)
-# }
 
-# the version for the grandmatrix.csv...
-# createchecklist <- function(indvect, issuevect, issueindmat) {
-#   dirvect <- rep(">=", length(issuevect))
-#   #iptest1 <- lp("min", indvect, issueindmat, dirvect, issuevect, all.bin=TRUE, num.bin.solns=1)
-#   iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))))
-#   indicatordf <- data.frame(indicators[iptest1$solution==1])
-#   colnames(indicatordf)[1] <- "ind0"
-#   indicatordf2 <- indicatordf %>%
-#     separate(ind0, into=c("ID", "Indicator"), sep="@") %>%
-#     select(ID, Indicator)
-#   return(indicatordf2)
-# }
-# 
-# 
-# makeissuevect <- function(issuelist) {
-#   issuematches <- match(issuelist, issues)
-#   issvect <- rep(0, length(issues))
-#   issvect[issuematches] = 1
-#   issvect  
-# }
-# 
-# 
-# shinyServer(function(input, output) {
-#   output$indicatorResults <- renderTable(createchecklist(indvect, makeissuevect(input$issuevect), issueindmat)) 
-#   
-# })
+shinyServer(function(input, output, session) {
+  # Render the issue trees.
+  # UI tree names need to be valid JavaScript identifiers.
+  filters <- names(issue_tree)
+  ui_names <- sprintf("tree%i", seq_along(filters))
 
+  output$tree_panels <- renderUI({
+    mapply(create_tree_panel, filters, ui_names, SIMPLIFY = FALSE)
+  })
 
-# From vector of indicator numbers, get indices of vectors
-getindicatorvectnos <- function(indidstr) {
-  vectidstr <- str_extract_all(indidstr, "\\d+")[[1]]
-  indnames <- as.character(values(indicatorinvdict[vectidstr[has.key(vectidstr, indicatorinvdict)]]))
-  vectindices <- match(indnames, indicators2)
-  vectindices
-}
+  mapply(
+    function(filter, ui_name) {
+      output[[ui_name]] <- renderTree(issue_tree[filter])
+    }, filters, ui_names
+  )
 
-# Create list for Rsymphony call
-makeboundslist <- function(requireds, excludeds){
-  requiredids <- NULL
-  excludedids <- NULL
-  if(nchar(requireds) > 0) {
-    requiredids <- getindicatorvectnos(requireds)
-  }
-  if(nchar(excludeds) > 0) {
-    excludedids <- getindicatorvectnos(excludeds)
-  }
-  indlist <- c(requiredids, excludedids)
-  vallist <- c(rep(1L, length(requiredids)), rep(0L, length(excludedids)))
-  if(length(indlist) == 0) {bounds <- NULL}
-  else {
-    bounds <- list(lower = list(ind=indlist, val=vallist),
-                   upper = list(ind=indlist, val=vallist))
-  }
-  bounds
-}
+  # Reactive binding for the indicator checklist (inputs and outputs).
+  get_checklist <- reactive({
+    ui_name <- ui_names[[match(input$filter, filters)]]
+    tree <- input[[ui_name]][[1]]
+    lookup <- issue_lookup[[input$filter]]
 
-makeboundslist2 <- function(indvect, requireds, excludeds){
-  requiredids <- NULL
-  excludedids <- NULL
-  if(nchar(requireds) > 0) {
-    requiredids <- getindicatorvectnos(requireds)
-  }
-  if(nchar(excludeds) > 0) {
-    excludedids <- getindicatorvectnos(excludeds)
-  }
-  indlist <- c(requiredids, excludedids)
-  indvect2 <- seq(1, length(indvect))
-  vallistlower <- rep(0L, length(indvect))
-  vallistlower[requiredids] <- 1L
-  vallisthigher <- rep(Inf, length(indvect))
-  vallisthigher[excludedids] <- 0L
-  vallist <- c(rep(1L, length(requiredids)), rep(0L, length(excludedids)))
-  if(length(indlist) == 0) {bounds <- NULL}
-  else {
-    bounds <- list(lower = list(ind=indvect2, val=vallistlower),
-                   upper = list(ind=indvect2, val=vallisthigher))
-  }
-  bounds
-}
+    selected_issues <- get_selected_issues(tree, lookup)
 
+    required <- match_indicators(input$required)
+    excluded <- match_indicators(input$excluded)
+    # Check whether indices should be excluded.
+    if (input$exclude_indices)
+      excluded <- union(excluded, indicator_indices)
+    # Make required indicators override excluded indicators.
+    excluded <- setdiff(excluded, required)
 
-# 30 December 2014
-# now based on SPARQL output...
-createchecklist <- function(indvect, issuevect, issueindmat, requireds, excludeds) {
-  dirvect <- rep(">=", length(issuevect))
-  #iptest1 <- lp("min", indvect, issueindmat, dirvect, issuevect, all.bin=TRUE, num.bin.solns=1)
-  # okay, here goes with the bounds stuff
-  #bounds <- makeboundslist(requireds, excludeds)
-  bounds <- makeboundslist2(indvect, requireds, excludeds)
-  #print(bounds)
-  #if(nchar(excludeds) > 0) {
-  #  excludedidx <- getindicatorvectnos(excludeds)}
-  #else {excludedidx <- NULL}
-  #issueindmat2b <- issueindmat
-  #for(j in excludedidx) {
-  #  linkedinds <- issueindmat2b[,j] == 1
-  #  issueindmat2b[linkedinds,j] <- vlargecost
-  #}
-  #
-  #print(issueindmat2b[,1])
-  #iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds, verbosity = 5)
-  iptest1 <- Rsymphony_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
-  #iptest1 <- Rglpk_solve_LP(indvect, issueindmat, dirvect, issuevect, types=(rep("B", length(indvect))), bounds=bounds)
-  indicatordf <- data.frame(indicators2[iptest1$solution==1])
-  colnames(indicatordf)[1] <- "Indicator"
-  indicatordf2 <- indicatordf %>%
-    #mutate(ID = indicatordict[[as.character(Indicator)]])) %>%  # not working, don't know why. wish the R folks thought about hashes 15 yrs ago
-    #mutate(ID = -9999) %>%
-    #mutate(ID = str_split(Indicator, "@")[[1]][1]) %>%
-    #mutate(ID = Indicator) %>%
-    #mutate(ID = indicatordict[[Indicator]]) %>% 
-    mutate(ID = unlist(mget(unlist(as.character(Indicator)), envir=indicatordict@.xData))) %>%
-    select(ID, Indicator)
-  return(indicatordf2)
-}
+    bounds <- create_bounds(required, excluded)
 
-# now amended to loop through issuelist if only looking at integrateds, and add in component issues
-makeissuevect <- function(issuelist, integratedonly=F) {
-  if (integratedonly) {
-    componentvect <- vector()
-    for(i in 1:nrow(integratedcomponent2)) {
-      currentintegrated <- integratedcomponent2[i,2]
-      if(currentintegrated %in% issuelist) {
-        componentvect <- union(componentvect, integratedcomponent2[i,1])}
+    # Uncomment to have the selected issues printed in terminal:
+    #print(rownames(issue_indicator_matrix)[selected_issues == 1])
+
+    indicators <- create_checklist(selected_issues, bounds)
+
+    list(
+      issues = selected_issues,
+      required = required,
+      excluded = excluded,
+      indicators = indicators
+    )
+  })
+
+  # Render the indicator table.
+  output$indicatorResults <- renderTable({
+    input$calculate_button
+
+    # Isolate inputs, so calculations only run when the button is pressed.
+    isolate(get_checklist()$indicators)
+  }, include.rownames = FALSE)
+
+  # Handle saving the selected issues and computed indicators.
+  output$save_button <- downloadHandler(
+    filename = function() {
+      format(Sys.time(), "%Y.%m.%d-Indicator-Checklist.zip")
+    },
+    content = function(file) {
+      checklist <- get_checklist()
+
+      # Put selected issues in a data frame for saving.
+      issues <- rownames(issue_indicator_matrix)
+      selected_issues <- issues[checklist$issues == 1, drop = FALSE]
+      checklist$issues <- data.frame(Issues = selected_issues)
+
+      # Put required/excluded/computed indicators in a data frame for saving.
+      required <- indicator_df[checklist$required, ]
+      if (nrow(required) > 0)
+        required["Status"] <- "Required"
+      excluded <- indicator_df[checklist$excluded, ]
+      if (nrow(excluded) > 0)
+        excluded["Status"] <- "Excluded"
+      checklist$indicators["Status"] <- "Included"
+
+      checklist$indicators <- rbind(checklist$indicators, required, excluded)
+
+      zip_csv(file, checklist[c("issues", "indicators")], row.names = FALSE)
     }
-    #print(componentvect)
-    issuematches <- union(match(issuelist, issues2), match(componentvect, issues2))}
-  else {issuematches <- match(issuelist, issues2)}
-  print(issuematches)
-  issvect <- rep(0, length(issues2))
-  issvect[issuematches] = 1
-  issvect  
-}
-
-
-shinyServer(function(input, output) {
-  output$indicatorResults <- renderTable(
-    createchecklist(indvect2, makeissuevect(input$issuevect, integratedonly=T), issueindmat2, input$requireds, input$excludeds))
+  )
 })
 
-# 12 April 2015. How to turn this into a real application? First off, need to deal with turning on and off indicators.
-# this can be done by bounds list in Rsymphony_solve_LP. E.g., if indicator 2 is needed and 3 is not needed,
-# something like bounds <- list(lower = list(ind=c(2,3), val = c(1, 0))), upper = list(ind = c(2, 3), val=c(1, 0))
-# I hope that works. Next problem would be, how to get from indicator id numbers to indices of the vectors
-# indicator id numbers to names is no problem, that's another hash table (unless I get similar problems with working with these)
-# match('water sources', indicators2) does this.
-# so match(indicatorinvdict[['34']], indicators2) works.
-# So we create two new ui elements, boxes to input indicator id numbers for included, unincluded, 
-# these get referenced in the call to createchecklist, we revise createchecklist so as to include these, then add
-# the bounds parameter to the Rsymphony_solve_LP call.
 
-# 3 May 2015. I accomplish something. The  envir=indicatordict@.xData formulation gets me at the environment inside
-# the hash class, and it seems to work for now. God that syntax is baroque though.
+create_checklist <- function(selected_issues, bounds)
+  # Create a table of indicators based on a vector of issues.
+  # 
+  # Args:
+  #   selected_issues   0-1 vector of selected issues
+  #   bounds            Rsymphony-format bounds list, for required/excluded
+  #                     indicators
+{
+  nrows <- nrow(issue_indicator_matrix)
 
-# 12 May 2015. The bounds stuff half works, doesn't function correctly for excludeds. Suspect a lower-level bug. Let's try a workaround
-# of making the costs of the excludeds very high.
-# This doesn't help either....
-# Look, Rglpk has the same interface function! Maybe I should try that instead.
+  # If no issues were selected, don't do anything.
+  if (all(selected_issues == 0))
+    return(data.frame())
+
+  ip <- Rsymphony_solve_LP(
+    # Coefficients for objective (minimization).
+    obj = rep_len(1, ncol(issue_indicator_matrix)),
+
+    # Left-hand side of constraints, as a matrix.
+    mat = issue_indicator_matrix,
+
+    # Direction of constraints.
+    dir = rep_len(">=", nrows),
+
+    # Right-hand side of constraints.
+    rhs = selected_issues,
+
+    # Variable types (B for binary).
+    types = rep_len("B", nrows),
+
+    # Variable bounds.
+    bounds = bounds
+  )
+
+  # Check that a solution was found.
+  if (ip$status != 0)
+    # TODO: Do something more robust than just printing a message.
+    print("Error, solution not found!")
+
+  # Look up the selected indicators.
+  selected_indicators <- as.logical(ip$solution)
+  indicator_df[selected_indicators, ]
+}
+
+
+get_selected_issues <- function(tree, lookup)
+  # Get 0-1 vector of selected issues.
+  #
+  # Args:
+  #   tree    the active tree, with the root removed (i.e., tree[[1]])
+  #   lookup  issue lookup table corresponding to the current tree
+{
+  # Get issue-indicator matrix row indices for selected integrated issues.
+  selected_int <- get_selected_nodes(tree)
+  selected_int <- unique(lookup$integrated[selected_int])
+
+  # Get issue-indicator matrix row indices for selected component issues.
+  selected_cmp <- lapply(tree, 
+    function(int_issue) {
+      if (class(int_issue) == "list")
+        get_selected_nodes(int_issue)
+    }
+  )
+  selected_cmp <- unlist(selected_cmp)
+  selected_cmp <- unique(lookup$component[selected_cmp])
+
+  # Assign 1 to selected issues, and 0 otherwise.
+  selected_issues <- numeric(nrow(issue_indicator_matrix))
+  selected_issues[selected_int] = 1
+  selected_issues[selected_cmp] = 1
+
+  return(selected_issues)
+}
+
+
+get_selected_nodes <- function(tree, attribute = "stselected")
+  # Get all selected nodes one level below the root of a tree.
+  #
+  # Args:
+  #   tree        tree with attributes
+  #   attribute   name of selection attribute
+{
+  vapply(tree,
+    function(issue) {
+      !is.null(attr(issue, attribute))
+    }, TRUE
+  )
+}
+
+
+create_bounds <- function(required, excluded)
+  # Create an Rsymphony bounds list for required and excluded indicators.
+  #
+  # Args:
+  #   required  indices vector for required indicators
+  #   excluded  indices vector for excluded indicators
+{
+  length_required <- length(required)
+  length_excluded <- length(excluded)
+
+  if (length_required == 0 && length_excluded == 0)
+    return(NULL)
+
+  bounds = list()
+
+  if (length_required > 0)
+    bounds$lower <- list(ind = required, val = rep_len(1, length_required))
+
+  if (length_excluded > 0)
+    bounds$upper <- list(ind = excluded, val = rep_len(0, length_excluded))
+
+  return(bounds)
+}
+
+
+match_indicators <- function(indicators)
+  # Get issue-indicator matrix column indices for indicator names.
+  #
+  # Args:
+  #   indicators  indicator names
+{
+  indices <- match(indicators, colnames(issue_indicator_matrix))
+
+  na.omit(indices)
+}
+
+
+create_tree_panel <- function(filter, ui_name)
+  # Create a conditional panel containing a tree widget.
+  #
+  # This is a workaround for a bug in shinyTree that prevents tree widgets from
+  # being updated correctly. Rather than updating the tree each time the filter
+  # is changed, we use one tree for each filter, and update which one is
+  # visible. For more details on the bug, see the shinyTree issue at:
+  #   https://github.com/trestletech/shinyTree/issues/17
+  #
+  # Args:
+  #   filter    filter for which the panel should be visible
+  #   ui_name   name for the tree widget
+{
+  conditionalPanel(
+    condition = sprintf("input.filter == '%s'", filter),
+    shinyTree(ui_name, checkbox = TRUE, search = TRUE)
+  )
+}
+
+
+zip_csv <- function(file, x, flags = "-j6X", ...)
+  # Save each element of a named list to CSV files in a zip archive.
+  #
+  # By default, the files are zipped using the flags
+  #   -j  don't store full file paths
+  #   -6  default compression
+  #   -X  don't store file attributes
+  # However, these can be modified through the flags parameter.
+  #
+  # Args:
+  #   file    path to zip file
+  #   x       list with named elements
+  #   flags   command-line flags for the zip program
+  #   ...     further arguments to write.csv()
+{
+  # Set up a temporary directory.
+  temp_dir <- tempdir()
+  temp_files <- file.path(temp_dir, paste0(names(x), ".csv"))
+
+  # Write the files.
+  mapply(write.csv, x, temp_files, MoreArgs = ...)
+  zip(file, temp_files, flags = flags)
+
+  # Remove the temporary files.
+  file.remove(temp_files)
+  unlink(temp_dir)
+}

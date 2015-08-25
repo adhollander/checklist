@@ -1,28 +1,52 @@
-
-# This is the user-interface definition of a Shiny web application.
-# You can find out more about building applications with Shiny here:
-# 
-# http://www.rstudio.com/shiny/
+# Description:
+#   User interface for the checklist app.
 #
+# Usage:
+#   runApp("checklist/")
 
 library(shiny)
+library(shinyTree)
 
-shinyUI(pageWithSidebar(
+shinyUI(fluidPage(
   
-  # Application title
-  headerPanel("Checklist Generator Prototype"),
+  # Application title.
+  titlePanel("Checklist Generator Prototype"),
   
-  # Sidebar 
-  sidebarPanel(
-    checkboxGroupInput("issuevect", label=NULL, choices=(integrateds = levels(integrateds)), selected=integrateds)),
-                                          # formerly issues2 ^
-  # Show a text list of indicators
-  mainPanel(
-    tableOutput("indicatorResults"),
-    textInput("requireds", "Required Indicators"),
-    textInput("excludeds", "Excluded Indicators"),
-    submitButton(text="Calculate Checklist")
+  sidebarLayout(
+    # Sidebar, with tree of issues.
+    sidebarPanel(
+      width = 5,
+      selectInput("filter", "Filter By", names(issue_tree)),
+      tags$div(
+        style = "overflow-y: scroll; max-height: 75vh",
+        tags$label("Search Issues", class = "control-label"),
+        uiOutput("tree_panels")
+      )
+    ),
+
+    # Main panel, with list of indicators.
+    mainPanel(
+      width = 7,
+      wellPanel(
+        selectizeInput(
+          "required",
+          label = "Required Indicators",
+          choices = colnames(issue_indicator_matrix),
+          multiple = TRUE,
+          options = list(selectOnTab = TRUE, maxOptions = 100)
+        ),
+        selectizeInput(
+          "excluded",
+          label = "Excluded Indicators",
+          choices = colnames(issue_indicator_matrix),
+          multiple = TRUE,
+          options = list(selectOnTab = TRUE, maxOptions = 100)
+        ),
+        checkboxInput("exclude_indices", label = "Exclude Indices"),
+        actionButton("calculate_button", "Calculate Checklist"),
+        downloadButton("save_button", "Save")
+      ),
+      tableOutput("indicatorResults")
+    )
   )
 ))
-
-# run with runApp("~/ASI/checklist/shiny")
