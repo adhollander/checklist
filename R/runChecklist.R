@@ -1,4 +1,21 @@
 
+#' Sustainable Sourcing Checklist Generator 
+#'
+#' This is a R/Shiny checklist generator app for the sustainable sourcing 
+#' project.
+#'
+#' @examples
+#' \dontrun{runChecklist()}
+#'
+#' @docType package
+#' @name checklist
+#' 
+#' @import stringr
+#' @import shiny
+#' @import shinyTree
+#' @import Rsymphony
+NULL
+
 #' Checklist Launcher
 #'
 #' Run the checklist app.
