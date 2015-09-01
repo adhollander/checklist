@@ -1,0 +1,15 @@
+Package: checklist
+Title: Sustainable Sourcing Checklist Generator
+Version: 0.2.0
+Authors@R: c(
+  person("Allan", "Hollander", email = "adhollander@ucdavis.edu", role = "cre"),
+  person("Nick", "Ulle", email = "naulle@ucdavis.edu", role = "aut"))
+Description: Sustainable sourcing checklist generator. 
+Depends: R (>= 3.2.1)
+License: GPL-3 | file LICENSE
+LazyData: true
+Imports:
+  stringr,
+  shiny,
+  shinyTree,
+  Rsymphony
