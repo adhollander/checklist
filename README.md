@@ -12,7 +12,7 @@ This is a R/Shiny checklist generator app for the sustainable sourcing project.
 4. Open RStudio.
 5. In the RStudio console, run `install.packages("devtools")`.
 6. In the RStudio console, run `library(devtools)` and then
-   `install_github("dsidavis/checklist")`.
+   `install_github("adhollander/checklist")`.
 
 [R]: https://www.r-project.org/
 [RStudio]: https://www.rstudio.com/
@@ -26,3 +26,8 @@ After installation, in an R console, run
 library(checklist)
 runChecklist()
 ```
+
+## Notes
+
+Installation on Mac OS X requires a previous installation of the SYMPHONY
+mixed integer linear programming library. See https://projects.coin-or.org/SYMPHONY/.
